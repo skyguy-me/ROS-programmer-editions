@@ -1,0 +1,141 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+    <canvas id="zoomLevelCanvas" width="1500" height="13"></canvas>
+    <canvas id="timeLineCanvas" width="1500" height="125"></canvas>
+    <canvas id="timeLineCanvas2" width="1500" height="125"></canvas>
+    <canvas id="timeLineCanvas3" width="1500" height="125"></canvas>
+    <canvas id="timePositionCanvas" width="1500" height="50"></canvas>
+    <div id="WebGL-output"></div>
+</body>
+</html>
+
+<script src="Scripts/three.js"></script>
+
+<script>
+
+</script>
+
+
+<script>
+
+    //all Functions
+
+
+    function getPosition() {
+        myNeck3.rotation.y += 3;
+
+
+        myNeck2.position.x = ((Math.sin(myObject.rotation.z)) * 16) * (-Math.cos(myObject.rotation.y).toPrecision(20));
+        myNeck2.position.y = (Math.cos(myObject.rotation.z) * 16);
+        myNeck2.position.z = (-(Math.tan(myObject.rotation.y).toPrecision(20)) * neck1.position.x);
+
+        myNeck3.position.x = ((Math.sin(myObject.rotation.z)) * 16) * (-Math.cos(myObject.rotation.y).toPrecision(20));
+        myNeck3.position.y = (Math.cos(myObject.rotation.z) * 16);
+        myNeck3.position.z = (-(Math.tan(myObject.rotation.y).toPrecision(20)) * neck2.position.x);
+
+        myNeck4.position.x = ((Math.sin(myObject.rotation.z)) * 16) * (-Math.cos(myObject.rotation.y).toPrecision(20));
+        myNeck4.position.y = (Math.cos(myObject.rotation.z) * 16);
+        myNeck4.position.z = (-(Math.tan(myObject.rotation.y).toPrecision(20)) * neck3.position.x);
+    }
+
+    function render() {
+        return setInterval(function () {
+
+            getPosition();
+            console.log('time');
+            renderer.render(scene, camera);
+        }, 1)
+    }
+</script>
+
+<script>
+    //all initializations and first set up
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000);
+    var renderer = new THREE.WebGLRenderer();
+
+    var material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+
+    var neck1Geo = new THREE.BoxGeometry(4, 16, 4, 20, 100, 20);
+    neck1Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck1 = new THREE.Mesh(neck1Geo, material);
+
+    var neck2Geo = new THREE.BoxGeometry(2, 16, 2, 20, 100, 20);
+    neck2Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck2 = new THREE.Mesh(neck2Geo, material);
+
+    var neck3Geo = new THREE.BoxGeometry(4, 16, 4, 20, 100, 20);
+    neck3Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck3 = new THREE.Mesh(neck3Geo, material);
+
+    var neck4Geo = new THREE.BoxGeometry(2, 16, 2, 20, 100, 20);
+    neck4Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck4 = new THREE.Mesh(neck4Geo, material);
+
+    var spotLight = new THREE.SpotLight(0xffffff);
+
+    var myObject = new THREE.Object3D();
+    myObject.add(neck1);
+    myObject.position.x = 0;
+    myObject.position.y = 0;
+    myObject.position.z = 0;
+
+
+    var myNeck2 = new THREE.Object3D();
+    neck1.add(myNeck2);
+    myNeck2.add(neck2);
+
+
+    var myNeck3 = new THREE.Object3D();
+    neck2.add(myNeck3);
+    myNeck3.add(neck3);
+
+
+    var myNeck4 = new THREE.Object3D();
+    neck3.add(myNeck4);
+    myNeck4.add(neck4);
+
+    renderer.setClearColor(new THREE.Color(0xEEEEEE, 1.0));
+    renderer.setSize(1500, 500)
+
+    camera.position.x = -70;
+    camera.position.y = 80;
+    camera.position.z = 60;
+    camera.lookAt(scene.position);
+
+
+    spotLight.position.set(0, 0, 100);
+    spotLight.castShadow = true;
+    scene.add(spotLight);
+    scene.add(myObject);
+
+    getPosition();
+
+    var canvas = document.getElementById("timeLineCanvas");
+    var context = canvas.getContext('2d')
+
+    var canvas2 = document.getElementById("timeLineCanvas2");
+    var context2 = canvas2.getContext('2d');
+
+    var canvas3 = document.getElementById("timeLineCanvas3");
+    var context3 = canvas3.getContext('2d');
+
+    var canvas4 = document.getElementById('timePositionCanvas');
+    var context4 = canvas4.getContext('2d');
+
+    var zoomCanvas = document.getElementById('zoomLevelCanvas');
+    var zoomContext = zoomCanvas.getContext('2d');
+
+
+    var keyPointArray = [];
+    var keyPointArray2 = [];
+    var keyPointArray3 = [];
+
+    document.getElementById("WebGL-output").appendChild(renderer.domElement);
+    renderer.render(scene, camera);
+
+</script>

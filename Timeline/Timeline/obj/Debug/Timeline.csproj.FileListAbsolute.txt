@@ -1,0 +1,6 @@
+c:\users\stujk\documents\visual studio 2013\Projects\Timeline\Timeline\bin\Timeline.dll.config
+c:\users\stujk\documents\visual studio 2013\Projects\Timeline\Timeline\bin\Timeline.dll
+c:\users\stujk\documents\visual studio 2013\Projects\Timeline\Timeline\bin\Timeline.pdb
+c:\users\stujk\documents\visual studio 2013\Projects\Timeline\Timeline\obj\Debug\Timeline.csprojResolveAssemblyReference.cache
+c:\users\stujk\documents\visual studio 2013\Projects\Timeline\Timeline\obj\Debug\Timeline.dll
+c:\users\stujk\documents\visual studio 2013\Projects\Timeline\Timeline\obj\Debug\Timeline.pdb

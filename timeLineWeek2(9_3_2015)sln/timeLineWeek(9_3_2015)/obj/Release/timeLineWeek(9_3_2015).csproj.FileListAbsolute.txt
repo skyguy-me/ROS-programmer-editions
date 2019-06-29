@@ -1,0 +1,6 @@
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\timeLineWeek2(9_3_2015)sln\timeLineWeek(9_3_2015)\bin\timeLineWeek(9_3_2015).dll.config
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\timeLineWeek2(9_3_2015)sln\timeLineWeek(9_3_2015)\bin\timeLineWeek(9_3_2015).dll
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\timeLineWeek2(9_3_2015)sln\timeLineWeek(9_3_2015)\bin\timeLineWeek(9_3_2015).pdb
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\timeLineWeek2(9_3_2015)sln\timeLineWeek(9_3_2015)\obj\Release\timeLineWeek(9_3_2015).dll
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\timeLineWeek2(9_3_2015)sln\timeLineWeek(9_3_2015)\obj\Release\timeLineWeek(9_3_2015).pdb
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\timeLineWeek2(9_3_2015)sln\timeLineWeek(9_3_2015)\obj\Release\timeLineWeek(9_3_2015).csprojResolveAssemblyReference.cache

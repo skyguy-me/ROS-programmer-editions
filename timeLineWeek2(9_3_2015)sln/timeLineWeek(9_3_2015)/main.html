@@ -1,0 +1,321 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <style>
+        body {
+            margin: 10px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body onload="setUp()">
+    <canvas id="screenCanvas" width="500" height="500"></canvas>
+    <canvas id="zoomCanvas" width="1500" height="250"></canvas>
+    <canvas id="timeLineCanvas" width="1500" height="250"></canvas>
+
+    
+</body>
+</html>
+<script src="three.js"></script>
+<script>
+    //global objects
+    var canvas = document.getElementById("timeLineCanvas");
+    var canvas2 = document.getElementById("zoomCanvas");
+    var canvas3 = document.getElementById('screenCanvas');
+
+    var context = canvas.getContext('2d');
+    var context2 = canvas2.getContext('2d');
+    var context3 = canvas3.getContext('2d');
+    var keyPointArray = [];
+    var zoomArray = [];
+
+    //global variables
+    var currentMousePos; //x & y-cordinate of cursor
+    var draging = false; //whether a drag event is occuring
+    var pointHit = false; //whether there is a existing point at click position
+    var hitIndex; //for keeping track of hit events
+    var divisionNumber = canvas.width / 10;//to create 10 one second divisions
+    var second = 0;
+    var position = 0;
+    var maxPositionValue = 45;
+    var minPositionValue = -45
+    var zoomHitIndex;
+
+
+
+    context.fillStyle = 'rgba(225,225,225,50)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context2.fillStyle = '#8eabb6';
+    context2.fillRect(0, 0, canvas2.width, canvas2.height);
+    context3.fillStyle = '#8eabb6';
+    context3.fillRect(0, 0, canvas3.width, canvas3.height);
+
+    function setUp() { //clear and reset canvas
+        var index = 0;
+        for (index; index < divisionNumber; index++) {
+            context.rect(divisionNumber * index, 0, 0.225, canvas.height);
+        }
+        context.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+        delete index;
+    }
+
+    function convertToXValue(point) {
+        return point.xCoord / divisionNumber;
+    }
+
+    function convertToYValue(point) {
+        if (point.yCoord > canvas.height / 2) {
+           return (point.yCoord - canvas.height / 2)/(canvas.height/2) * minPositionValue;
+        }
+        else if (point.yCoord == canvas.height / 2) {
+            return 0;
+        }
+        else {
+            return (canvas.height/2 - point.yCoord) / (canvas.height / 2) * maxPositionValue;
+        }
+    }
+
+    function projectCoordinates() {
+        var index = 0
+        context3.clearRect(0, 0, canvas3.width, canvas3.height);
+        context3.font = '10pt Calibri';
+        context3.fillStyle = 'black';
+        for (index; index < keyPointArray.length; index++) {
+            context3.fillText(keyPointArray[index].time + ' seconds', 30, 20 + 15 * index);
+            context3.fillText(convertToYValue(keyPointArray[index]) + ' angles', 300, 20 + 15 * index);
+
+        }
+        delete index;
+    }
+    
+
+
+    function KeyPoint(xCoord, yCoord, color) { //keyPointObject Skeleton
+        this.time = (xCoord/divisionNumber) + startingValue;
+        this.yCoord = yCoord;
+        this.radius = 9.0;
+        this.color = color;
+        function setColor(setColour) {
+            color = setColor;
+            return color;
+        }
+    }
+    function zoomPoint(xCoord, yCoord) { //zoomPoint Skeleton
+        this.xCoord = xCoord;
+        this.yCoord = yCoord;
+        this.time = xCoord /(canvas.width / 30);
+        this.radius = 9.0;
+    }
+    zoomArray[0] = new zoomPoint(0, canvas.height / 2);
+    zoomArray[1] = new zoomPoint(canvas.width, canvas.height / 2);
+    divisionNumber = (canvas.width) / (zoomArray[1].time - zoomArray[0].time);
+    console.log(divisionNumber);
+
+
+    keyPointArray[0] = new KeyPoint(0, canvas.height / 2, 'red');//add first point to Array
+    keyPointArray[0].time = 0;
+    var startingValue = zoomArray[0].time;
+    function getCurrentMousePos(canvas, evt) {//return X&Y of current mousePosition
+        var rect = canvas.getBoundingClientRect();
+
+        return {
+            x: Math.round((evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width),
+            y: Math.round((evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height)
+        };
+    }
+
+    function plotKeyPoint() {//to plot keyPoints onCanvas
+        //local variables
+        var index = 0;
+        //
+        context.clearRect(0, 0, canvas.width, canvas.height); //clear canvas and move to first coordinate's center
+        
+       canvas2.width = canvas2.width
+
+        for (index; index < keyPointArray.length; index++) {
+            var position = keyPointArray[index];
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.arc((position.time - startingValue) * divisionNumber, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context.moveTo((position.time - startingValue) * divisionNumber, position.yCoord);
+            context.stroke();
+            context.fillStyle = position.color;
+            context.fill();
+            context.moveTo((position.time - startingValue) * divisionNumber, position.yCoord);
+        }
+        index = 0;
+        for (index = 0; index < 2; index++) {
+            var circle = zoomArray[index];
+          
+            context2.clearRect(0, 0, canvas.width, canvas.height);
+            context2.arc(circle.xCoord, circle.yCoord, 9, 0, 2 * Math.PI, false);
+            context2.moveTo(circle.xCoord, circle.yCoord);
+            context2.stroke();
+            context2.moveTo(circle.xCoord, circle.yCoord);
+
+
+        }
+        delete index;
+    }
+
+    function hitPoint(point, mx, my) {
+        var dx;
+        var dy;
+        dx = mx - point.time*divisionNumber;
+        dy = my - point.yCoord;
+
+        if ((dx * dx + dy * dy) < 150 == true) {
+            delete dx;
+            delete dy;
+            return true
+        }
+        return false;
+    }
+    function hitPoint2(point, mx, my) {
+        var dx;
+        var dy;
+        dx = mx - point.xCoord;
+        dy = my - point.yCoord;
+       // console.log(dx + ' - vs - ' + dy);
+
+        if ((dx * dx + dy * dy) < 150 == true) {
+            delete dx;
+            delete dy;
+            console.log(true);
+            return true
+        }
+        return false;
+    }
+
+
+    function sortArray() {
+        keyPointArray.sort(function (a, b) { return a.time - b.time });
+    }
+
+    function drawLabels() {
+        var index = 0;
+        for (index = 0; index < divisionNumber; index++) {
+            context.font = '10pt Calibri';
+            context.fillStyle = 'black';
+            context.rect(divisionNumber * index, 0, 0.225, canvas.height);
+            context.fillText((index+startingValue) + 'sec', divisionNumber * index, canvas.height - 30);
+        }
+    }
+    
+    canvas.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        currentMousePos = getCurrentMousePos(canvas, evt);
+
+        for (searchIndex; searchIndex < keyPointArray.length; searchIndex++) {
+            if (hitPoint(keyPointArray[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true;
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray[keyPointArray.length] = keyPoint;
+        }
+        canvas.width = canvas.width;
+        setUp();
+        sortArray();
+        plotKeyPoint();
+        projectCoordinates();
+        drawLabels();
+    }
+
+    canvas.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas, evt);
+        if (draging == true) {
+            keyPointArray[hitIndex].time = currentMousePos.x/divisionNumber;
+            keyPointArray[hitIndex].yCoord = currentMousePos.y;
+            canvas.width = canvas.width;
+            setUp();
+            plotKeyPoint();
+            projectCoordinates();
+            drawLabels();
+        }
+    }
+
+    canvas.onmouseup = function (evt) {
+        draging = false;
+        canvas.width = canvas.width;
+        setUp();
+        sortArray();
+        plotKeyPoint();
+        projectCoordinates();
+        projectCoordinates();
+        drawLabels();
+    }
+
+    canvas2.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        currentMousePos = getCurrentMousePos(canvas2, evt);
+
+        for (searchIndex; searchIndex < zoomArray.length; searchIndex++) {
+            if (hitPoint2(zoomArray[searchIndex], currentMousePos.x, currentMousePos.y) === true) {
+                zoomHitIndex = searchIndex;
+                pointHit = true;
+                draging = true;
+                delete searchIndex;
+                console.log(true);
+                break;
+            }
+        }
+        delete searchIndex;
+        canvas.width = canvas.width;
+        canvas2.width = canvas2.width;
+
+        setUp();
+        sortArray();
+        plotKeyPoint();
+        projectCoordinates();
+        drawLabels();
+    }
+
+    canvas2.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas2, evt);
+        if (draging == true) {
+            zoomArray[zoomHitIndex].xCoord = currentMousePos.x
+            zoomArray[zoomHitIndex].time = currentMousePos.x / (canvas.width / 10);
+            canvas.width = canvas.width;
+            setUp();
+            plotKeyPoint();
+            projectCoordinates();
+            drawLabels();
+        }
+    }
+
+    canvas2.onmouseup = function (evt) {
+        draging = false;
+        canvas.width = canvas.width;
+        zoomHitIndex = null;
+        setUp();
+        sortArray();
+        plotKeyPoint();
+        projectCoordinates();
+        projectCoordinates();
+        drawLabels();
+    }
+
+    var renderTimer = setInterval(function () {
+        startingValue = zoomArray[0].time;
+        divisionNumber = (canvas.width) / ((zoomArray[1].time) - (zoomArray[0].time));
+        console.log('starting Time: '+startingValue);
+        console.log('divisionNumber: ' + divisionNumber);
+        console.log('zoom1time - zoomTime2 '+((zoomArray[1].time) - (zoomArray[0].time)));
+
+    }, 1);
+
+</script>

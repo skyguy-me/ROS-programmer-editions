@@ -1,0 +1,6 @@
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\ThreeJSApplication6\ThreeJSApplication6\bin\ThreeJSApplication6.dll.config
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\ThreeJSApplication6\ThreeJSApplication6\bin\ThreeJSApplication6.dll
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\ThreeJSApplication6\ThreeJSApplication6\bin\ThreeJSApplication6.pdb
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\ThreeJSApplication6\ThreeJSApplication6\obj\Debug\ThreeJSApplication6.dll
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\ThreeJSApplication6\ThreeJSApplication6\obj\Debug\ThreeJSApplication6.pdb
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\ThreeJSApplication6\ThreeJSApplication6\obj\Debug\ThreeJSApplication6.csprojResolveAssemblyReference.cache

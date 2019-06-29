@@ -1,0 +1,6 @@
+c:\users\stujk\documents\visual studio 2013\Projects\ThreeJSApplication1\ThreeJSApplication1\bin\ThreeJSApplication1.dll.config
+c:\users\stujk\documents\visual studio 2013\Projects\ThreeJSApplication1\ThreeJSApplication1\bin\ThreeJSApplication1.dll
+c:\users\stujk\documents\visual studio 2013\Projects\ThreeJSApplication1\ThreeJSApplication1\bin\ThreeJSApplication1.pdb
+c:\users\stujk\documents\visual studio 2013\Projects\ThreeJSApplication1\ThreeJSApplication1\obj\Debug\ThreeJSApplication1.csprojResolveAssemblyReference.cache
+c:\users\stujk\documents\visual studio 2013\Projects\ThreeJSApplication1\ThreeJSApplication1\obj\Debug\ThreeJSApplication1.dll
+c:\users\stujk\documents\visual studio 2013\Projects\ThreeJSApplication1\ThreeJSApplication1\obj\Debug\ThreeJSApplication1.pdb

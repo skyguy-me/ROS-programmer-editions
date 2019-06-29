@@ -1,0 +1,1352 @@
+﻿<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>timeLine+Animmation</title>
+    <script src="Scripts/three.js"></script>
+    <script src="Scripts/XMLWriter-1.0.0 (2).js"></script>
+    <script src="Scripts/FileSaver.min.js"></script>
+</head>
+<body>
+
+    <p>
+        <input type="number" id="TEXTFIELD_ID" t />
+        <button id="playButton" style="width:80px;height:20px;" onclick="init()">Set Time</button>
+    </p>
+    <div>
+        <canvas id="zoomLevelCanvas" width="2000" height="50">dsdsd</canvas>
+        <canvas width="2000" height="5"></canvas>
+        <canvas id="rotationTimeLineCanvas" width="2000" height="150"></canvas>
+        <canvas width="2000" height="5"></canvas>
+        <canvas id="neck1TimeLineCanvas" width="2000" height="150"></canvas>
+        <canvas width="2000" height="5"></canvas>
+        <canvas id="neck2TimeLineCanvas" width="2000" height="150"></canvas>
+        <canvas width="2000" height="5"></canvas>
+        <canvas id="neck3TimeLineCanvas" width="2000" height="150"></canvas>
+        <canvas width="2000" height="5"></canvas>
+        <canvas id="LEDTimeLineCanvas" width="2000" height="150"></canvas>
+        <canvas width="2000" height="5"></canvas>
+        <canvas id="timePositionCanvas" width="2000" height="35"></canvas>
+        <div id="WebGL-output">
+        </div>
+    </div>
+    <button id="playButton" style="width:60px;height:30px;" onclick="start()">►</button>
+    <button id="ST0Pbutton" style="width:60px;height:30px;" onclick="stop()">■</button>
+    <input id="outputButton" type="button" value="output File" onclick="output()" />
+    <!-- Div which will hold the Output -->
+
+</body>
+</html>
+
+<script type="text/javascript">
+    /*
+    */
+    //global objects
+    var canvas = document.getElementById("rotationTimeLineCanvas");
+    var context = canvas.getContext('2d');
+
+    var canvas2 = document.getElementById("neck1TimeLineCanvas");
+    var context2 = canvas2.getContext('2d');
+
+    var canvas3 = document.getElementById("neck2TimeLineCanvas");
+    var context3 = canvas3.getContext('2d');
+
+    var canvas4 = document.getElementById("neck3TimeLineCanvas");
+    var context4 = canvas4.getContext('2d');
+
+    var canvas5 = document.getElementById('timePositionCanvas');
+    var context5 = canvas5.getContext('2d');
+
+    var zoomCanvas = document.getElementById('zoomLevelCanvas');
+    var zoomContext = zoomCanvas.getContext('2d');
+
+    var LEDCanvas = document.getElementById('LEDTimeLineCanvas');
+    var LEDContext = LEDCanvas.getContext('2d');
+
+
+
+    var buttonPlay = document.getElementById('playButton');
+    var totalTimeTextField = document.getElementById('TEXTFIELD_ID');
+
+
+    buttonPlay.disabled = false;
+
+    var keyPointArray = [];
+    var keyPointArray2 = [];
+    var keyPointArray3 = [];
+    var keyPointArray4 = [];
+    var zoomArray = [];
+    var RGBArray = [];
+    var INTArray = [];
+
+    var material1 = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+    var material2 = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+    var material3 = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+    var material4 = new THREE.MeshLambertMaterial({ color: 0x212121 });
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(61, window.innerWidth / window.innerHeight, 0.01, 1000);
+    var renderer = new THREE.WebGLRenderer({ antialias: false, precision: 'highp' });
+
+    var renderTimer = setInterval(function () {
+        render();
+    }, 1);//to initialize rendering at 60fps
+
+    var neck1Geo = new THREE.BoxGeometry(4, 16, 4, 20, 100, 20);
+    neck1Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck1 = new THREE.Mesh(neck1Geo, material1);
+
+    var neck2Geo = new THREE.BoxGeometry(2, 16, 2, 20, 100, 20);
+    neck2Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck2 = new THREE.Mesh(neck2Geo, material2);
+
+    var neck3Geo = new THREE.BoxGeometry(4, 16, 4, 20, 100, 20);
+    neck3Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck3 = new THREE.Mesh(neck3Geo, material3);
+
+    var neck4Geo = new THREE.BoxGeometry(2, 16, 2, 20, 100, 20);
+    neck4Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck4 = new THREE.Mesh(neck4Geo, material4);
+
+    var myObject = new THREE.Object3D();
+    var myNeck2 = new THREE.Object3D();
+    var myNeck3 = new THREE.Object3D();
+    var myNeck4 = new THREE.Object3D();
+
+    var spotLight = new THREE.SpotLight(0xffffff);
+
+    //global variables
+    var currentMousePos; //x & y-cordinate of cursor
+    var draging = false; //whether a drag event is occuring
+    var pointHit = false; //whether there is a existing point at click position
+    var intDragging = false;
+    var hitIndex; //for keeping track of hit events
+    var deleteIndex;
+    var toDelete = false;//to create delete function
+    var divisionNumber;
+    var originalDivisionNumber;//to create 10 one second divisions. Chanmge this variable to change the timeline's time value
+    var startingTime = 0;
+    var playIndex = 0; //to get the position at which the timer is playing
+    var zoomHitIndex;
+    var zoomDragging = false
+    var moveDrag = false;
+    var offsetx = 0;
+    var clickx = 0
+    var originalX0;
+    var originalX1;
+    var totalTime;
+    var oldTotalTime = 0;
+
+    function output() {
+        var index = 0;
+        var xw = new XMLWriter('UTF-8');
+        xw.formatting = 'indented';//add indentation and newlines
+        xw.indentChar = ' ';//indent with spaces
+        xw.indentation = 3;//add 3 spaces per level
+
+        xw.writeStartDocument();//begin rotation acutator
+        xw.writeStartElement('Animation');
+        xw.writeAttributeString('totalTime', totalTime);
+        xw.writeStartElement('Acutator');
+        xw.writeAttributeString('id', 'base rotation');
+        for (index = 0; index < keyPointArray.length; index++) {
+            xw.writeStartElement('KeyPoint');
+            xw.writeAttributeString('time', keyPointArray[index].time);
+
+            xw.writeStartElement('Values');
+            xw.writeElementString('yValue', keyPointArray[index].yCoord.toString());
+
+            xw.writeEndElement();
+            xw.writeEndElement();
+        }
+        xw.writeEndElement(); //end rotation acutator
+
+        xw.writeStartElement('acutator');//begin neck1 acutator
+        xw.writeAttributeString('id', 'neck1');
+        for (index = 0; index < keyPointArray2.length; index++) {
+            xw.writeStartElement('KeyPoint');
+            xw.writeAttributeString('time', keyPointArray2[index].time);
+
+            xw.writeStartElement('Values');
+            xw.writeElementString('yValue', keyPointArray2[index].yCoord.toString());
+
+            xw.writeEndElement();
+            xw.writeEndElement();
+        }
+        xw.writeEndElement(); //end neck1 acutator
+
+        xw.writeStartElement('acutator');//begin neck2 acutator
+        xw.writeAttributeString('id', 'neck2');
+        for (index = 0; index < keyPointArray3.length; index++) {
+            xw.writeStartElement('KeyPoint');
+            xw.writeAttributeString('time', keyPointArray3[index].time);
+
+            xw.writeStartElement('Values');
+            xw.writeElementString('yValue', keyPointArray3[index].yCoord.toString());
+
+            xw.writeEndElement();
+            xw.writeEndElement();
+        }
+        xw.writeEndElement(); //end neck2 acutator
+
+        xw.writeStartElement('acutator');//begin neck3 acutator
+        xw.writeAttributeString('id', 'neck3');
+        for (index = 0; index < keyPointArray4.length; index++) {
+            xw.writeStartElement('KeyPoint');
+            xw.writeAttributeString('time', keyPointArray4[index].time);
+            xw.writeStartElement('Values');
+            xw.writeElementString('yValue', keyPointArray4[index].yCoord.toString());
+            xw.writeEndElement();
+            xw.writeEndElement();
+        }
+        xw.writeEndElement(); //end neck3 acutator
+
+        xw.writeStartElement('acutator');//begin LED acutator
+        xw.writeAttributeString('id', 'LED');
+        for (index = 0; index < RGBArray.length; index++) {
+            xw.writeStartElement('KeyPoint');
+            xw.writeAttributeString('time', RGBArray[index].time);
+            xw.writeStartElement('Values');
+            xw.writeElementString('red', RGBArray[index].redValue.toString());
+            xw.writeElementString('green', RGBArray[index].greenValue.toString());
+            xw.writeElementString('blue', RGBArray[index].blueValue.toString());
+            xw.writeEndElement();
+            xw.writeEndElement();
+        }
+        xw.writeEndElement(); //end LED acutator
+        xw.writeEndElement();//end animation
+        xw.writeEndDocument();
+
+        var text = xw.flush();
+        var blob = new Blob([text], { type: "xml;charset=utf-8" });
+        saveAs(blob, "hello world.txt");
+    }
+
+    function init() {
+        renderer.setClearColor(new THREE.Color(0xFFFFFF, 1.0));
+        renderer.setSize(2000, 500);
+
+        myObject.add(neck1);
+        myObject.position.x = 0;
+        myObject.position.y = 0;
+        myObject.position.z = 0;
+        neck1.add(myNeck2);
+        myNeck2.add(neck2);
+        neck2.add(myNeck3);
+        myNeck3.add(neck3);
+        neck3.add(myNeck4);
+        myNeck4.add(neck4);
+
+        scene.add(myObject)
+
+        // position and point the camera to the center of the scene
+        camera.position.x = -70;
+        camera.position.y = 70;
+        camera.position.z = 50;
+        camera.lookAt(scene.position);
+
+        // add spotlight for the shadows
+
+        spotLight.position.set(0, 0, 200);
+        spotLight.castShadow = false;
+        spotLight.intensity = 15;
+        scene.add(spotLight);
+
+        // add the output of the renderer to the html element
+        document.getElementById("WebGL-output").appendChild(renderer.domElement);
+
+        totalTime = parseInt(totalTimeTextField.value);
+        divisionNumber = canvas.width / totalTime;
+        originalDivisionNumber = divisionNumber;
+
+        if (oldTotalTime === 0) {
+            keyPointArray[0] = new KeyPoint(0, canvas.height, 'blue');//add first point to Array
+            keyPointArray2[0] = new KeyPoint(0, canvas2.height, 'red');//add first point to Array
+            keyPointArray3[0] = new KeyPoint(0, canvas3.height, 'green');//add first point to Array
+            keyPointArray4[0] = new KeyPoint(0, canvas4.height, 'yellow');//add first point to Array
+            RGBArray[0] = new KeyPoint(0, LEDCanvas.height, 'grey');//add first point to Array
+            INTArray[0] = new KeyPoint(0, LEDCanvas.height / 2, 'grey');//add first point to Array
+        }
+
+        if (totalTime > oldTotalTime) {
+            keyPointArray.push(new KeyPoint(canvas.width, keyPointArray[keyPointArray.length - 1].yCoord, 'blue'));
+            keyPointArray2.push(new KeyPoint(canvas.width, keyPointArray2[keyPointArray3.length - 1].yCoord, 'red'));
+            keyPointArray3.push(new KeyPoint(canvas.width, keyPointArray3[keyPointArray3.length - 1].yCoord, 'green'));
+            keyPointArray4.push(new KeyPoint(canvas.width, keyPointArray4[keyPointArray4.length - 1].yCoord, 'yellow'));
+            RGBArray.push(new KeyPoint(LEDCanvas.width, RGBArray[RGBArray.length - 1].yCoord, 'grey'));//add first point to Array
+            INTArray.push(new KeyPoint(LEDCanvas.width, INTArray[INTArray.length - 1].yCoord, 'white'))
+        }
+        else if (totalTime < oldTotalTime) {
+            var index;
+            for (index = 0; index < keyPointArray.length; index++) {
+                var y = getYValue(keyPointArray, totalTime * divisionNumber)
+                if (keyPointArray[index].time > totalTime) {
+                    keyPointArray.splice(index, keyPointArray.length - index);
+                    keyPointArray.push(new KeyPoint(canvas.width, y, 'blue'));
+                    break;
+                }
+            }
+            for (index = 0; index < keyPointArray2.length; index++) {
+                var y = getYValue(keyPointArray2, totalTime * divisionNumber);
+                if (keyPointArray2[index].time > totalTime) {
+                    keyPointArray2.splice(index, keyPointArray2.length - index)
+                    keyPointArray2.push(new KeyPoint(canvas.width, y, 'red'));
+                    break;
+                }
+            }
+
+            for (index = 0; index < keyPointArray3.length; index++) {
+                var y = getYValue(keyPointArray3, totalTime * divisionNumber);
+                if (keyPointArray3[index].time > totalTime) {
+                    keyPointArray3.splice(index, keyPointArray3.length - index);
+                    keyPointArray3.push(new KeyPoint(canvas.width, y, 'green'));
+                    break;
+                }
+            }
+
+            for (index = 0; index < keyPointArray4.length; index++) {
+                var y = getYValue(keyPointArray4, totalTime * divisionNumber);
+                if (keyPointArray4[index].time > totalTime) {
+                    keyPointArray4.splice(index, keyPointArray4.length - index);
+                    keyPointArray4.push(new KeyPoint(canvas.width, y, 'yellow'));
+                    break;
+                }
+            }
+            for (index = 0; index < RGBArray.length; index++) {
+                var y = getYValue(RGBArray, totalTime * divisionNumber)
+                if (RGBArray[index].time > totalTime) {
+                    RGBArray.splice(index, RGBArray.length - index);
+                    RGBArray.push(new KeyPoint(canvas.width, y, 'grey'));
+                    INTArray.splice(index, INTArray.length - index);
+                    INTArray.push(new KeyPoint(canvas.width, 0, 'white'));
+                    break;
+                }
+            }
+        }
+
+        oldTotalTime = totalTime;
+
+        zoomArray[0] = new zoomPoint(0, zoomCanvas.height);
+        zoomArray[1] = new zoomPoint(zoomCanvas.width, zoomCanvas.height);
+
+        divisionNumber = (canvas.width) / (zoomArray[1].time - zoomArray[0].time);
+
+        zoomContext.fillStyle = '#f2f2f2';
+        zoomContext.fillRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+
+
+        render();
+    }
+
+
+    function setUp() { //clear and reset canvas
+        var index = 0;
+        context.fillStyle = "#212121";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        context2.fillStyle = "#212121";
+        context2.fillRect(0, 0, canvas.width, canvas.height);
+
+        context3.fillStyle = "#212121";
+        context3.fillRect(0, 0, canvas.width, canvas.height);
+
+        context4.fillStyle = "#212121";
+        context4.fillRect(0, 0, canvas.width, canvas.height);
+
+        LEDContext.clearRect(0, 0, LEDCanvas.width, LEDCanvas.height);
+
+        for (index = 0; index <= totalTime; index++) {
+
+            context.fillStyle = 'black';
+            context.rect(divisionNumber * index, 0, 0.225, canvas.height);
+
+            context2.fillStyle = 'black';
+            context2.rect(divisionNumber * index, 0, 0.225, canvas.height);
+
+            context3.fillStyle = 'black';
+            context3.rect(divisionNumber * index, 0, 0.225, canvas.height);
+
+            context4.fillStyle = 'black';
+            context4.rect(divisionNumber * index, 0, 0.225, canvas.height);
+
+        }
+
+        context.fillStyle = "#FF0000";
+        context.rect(playIndex, 0, 2, canvas.height);//to draw a moving timeLine
+        context.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+
+        context2.fillStyle = "#FF0000";
+        context2.rect(playIndex, 0, 2, canvas.height);//to draw a moving timeLine
+        context2.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context2.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context2.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+
+        context3.fillStyle = "#FF0000";
+        context3.rect(playIndex, 0, 2, canvas.height);//to draw a moving timeLine
+        context3.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context3.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context3.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+
+        context4.fillStyle = "#FF0000";
+        context4.rect(playIndex, 0, 2, canvas.height);//to draw a moving timeLine
+        context4.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context4.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context4.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+
+        var gradient = LEDContext.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, 'red')
+        gradient.addColorStop(0.08, 'orange')
+        gradient.addColorStop(0.16, 'yellow')
+        gradient.addColorStop(0.24, 'lime')
+        gradient.addColorStop(0.3, 'green')
+        gradient.addColorStop(0.38, '#00FF7F')
+        gradient.addColorStop(0.42, 'cyan')
+        gradient.addColorStop(0.46, 'dodgerblue')
+        gradient.addColorStop(0.5, 'blue')
+        gradient.addColorStop(0.58, 'dodgerblue')
+        gradient.addColorStop(0.62, 'cyan')
+        gradient.addColorStop(0.7, '#00FF7F')
+        gradient.addColorStop(0.75, 'green');
+        gradient.addColorStop(0.79, 'lime');
+        gradient.addColorStop(0.83, 'yellow');
+        gradient.addColorStop(0.91, 'orange');
+        gradient.addColorStop(1, 'red');
+        LEDContext.fillStyle = gradient;
+        LEDContext.fillRect(0, 0, canvas.width, canvas.height);
+
+        delete index;
+    }
+
+    function convertToTimeValue(value) {
+        return value / divisionNumber;
+    }
+
+    function convertToYValue(canvas, value) {
+        //if (value === 0) {
+        //    return 0;
+        //}
+        return ((canvas.height - value) / canvas.height)
+    }
+
+    function KeyPoint(xCoords, yCoords, color) { //keyPointObject Skeleton
+        this.yCoord = yCoords;
+        this.radius = 9.0;
+        this.color = color;
+        this.time = convertToTimeValue(xCoords) + startingTime;
+        var RGB = LEDContext.getImageData(xCoords, yCoords, 1, 1);
+        //optionals for color timeline
+        this.HSV = rgb2hsv(RGB.data[0], RGB.data[1], RGB.data[2]);
+        this.hueValue = this.HSV[0];
+        this.saturation = this.HSV[1];
+        this.brightnessValue = this.HSV[2];
+
+        var rgbValues = hsv2rgb(this.hueValue, this.saturation, this.brightnessValue);
+        this.redValue = rgbValues[0]
+        this.greenValue = rgbValues[1]
+        this.blueValue = rgbValues[2]
+    }
+
+    function zoomPoint(xCoord, yCoord) { //zoomPoint Skeleton
+        this.xCoord = xCoord;
+        this.yCoord = yCoord;
+        this.time = xCoord / originalDivisionNumber;
+        this.radius = 9.0;
+    }
+
+    function getCurrentMousePos(canvas, evt) {//return X&Y of current mousePosition
+        var rect = canvas.getBoundingClientRect();
+
+        return {
+            x: Math.round((evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width),
+            y: Math.round((evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height)
+        };
+    }
+
+    function plotKeyPoint() {//to plot keyPoints onCanvas
+        //local variables
+        var index = 0;
+        //
+
+        context.clearRect(0, 0, canvas.width, canvas.height); //clear canvas and move to first coordinate's center
+        context2.clearRect(0, 0, canvas.width, canvas.height); //clear canvas and move to first coordinate's center
+        context3.clearRect(0, 0, canvas.width, canvas.height); //clear canvas and move to first coordinate's center
+        context4.clearRect(0, 0, canvas.width, canvas.height); //clear canvas and move to first coordinate's center
+
+        setUp();
+
+        context.moveTo((keyPointArray[0].time - startingTime) * divisionNumber, keyPointArray[0].yCoord);
+        context2.moveTo((keyPointArray2[0].time - startingTime) * divisionNumber, keyPointArray2[0].yCoord);
+        context3.moveTo((keyPointArray3[0].time - startingTime) * divisionNumber, keyPointArray3[0].yCoord);
+        context4.moveTo((keyPointArray4[0].time - startingTime) * divisionNumber, keyPointArray4[0].yCoord);
+
+
+
+        for (index; index < keyPointArray.length; index++) {
+            var position = keyPointArray[index];
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.arc((position.time - startingTime) * divisionNumber, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context.moveTo(position.time - startingTime * divisionNumber, position.yCoord);
+            context.stroke();
+            context.fillStyle = position.color;
+            context.fill();
+            context.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            delete position;
+        }
+
+        for (index = 0; index < keyPointArray2.length; index++) {
+            var position = keyPointArray2[index];
+            context2.clearRect(0, 0, canvas2.width, canvas2.height);
+            context2.arc((position.time - startingTime) * divisionNumber, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context2.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            context2.stroke();
+            context2.fillStyle = position.color;
+            context2.fill();
+            context2.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            delete position;
+        }
+
+        for (index = 0; index < keyPointArray3.length; index++) {
+            var position = keyPointArray3[index];
+            context3.clearRect(0, 0, canvas3.width, canvas3.height);
+            context3.arc((position.time - startingTime) * divisionNumber, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context3.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            context3.stroke();
+            context3.fillStyle = position.color;
+            context3.fill();
+            context3.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            delete position;
+        }
+
+        for (index = 0; index < keyPointArray4.length; index++) {
+            var position = keyPointArray4[index];
+            context4.clearRect(0, 0, canvas4.width, canvas4.height);
+            context4.arc((position.time - startingTime) * divisionNumber, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context4.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            context4.stroke();
+            context4.fillStyle = position.color;
+            context4.fill();
+            context4.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            delete position;
+        }
+
+        for (index = 0; index < 2; index++) {
+            var circle = zoomArray[index];
+
+            zoomContext.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+
+            zoomContext.fillStyle = '#BDBDBD';
+            zoomContext.fillRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+
+            zoomContext.fillStyle = 'rgba(255,0,0,1)';
+            zoomContext.fillRect(zoomArray[0].xCoord, 0, zoomArray[1].xCoord - zoomArray[0].xCoord, zoomCanvas.height - 8);
+
+            zoomContext.fillStyle = 'blue'
+            zoomContext.arc(circle.xCoord, zoomCanvas.height - 8, 8, 0, 2 * Math.PI, false);
+            zoomContext.moveTo(circle.xCoord, zoomCanvas.height - 8);
+            zoomContext.fill();
+            zoomContext.moveTo(circle.xCoord, zoomCanvas.height - 8);
+            zoomContext.fillRect(zoomArray[0].xCoord, zoomCanvas.height - 8, zoomArray[1].xCoord - zoomArray[0].xCoord, 12);
+        }
+
+        LEDContext.beginPath();
+        for (index = 0; index < RGBArray.length; index++) {
+            var position = RGBArray[index];
+
+            LEDContext.arc((position.time - startingTime) * divisionNumber, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            LEDContext.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            LEDContext.lineWidth = 3;
+            LEDContext.stroke();
+            if (index != hitIndex && draging === false) {
+                LEDContext.fillStyle = 'white';
+                LEDContext.fill();
+            }
+            LEDContext.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            delete position;
+
+        }
+        LEDContext.closePath();
+
+        LEDContext.beginPath();
+        for (index = 0; index < RGBArray.length; index++) {
+            var position = INTArray[index];
+            LEDContext.beginPath();
+            LEDContext.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            LEDContext.arc((position.time - startingTime) * divisionNumber, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            LEDContext.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+
+            if (draging === false) {
+                LEDContext.stroke();
+                LEDContext.fillStyle = 'grey';
+                LEDContext.fill();
+            }
+
+            LEDContext.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            LEDContext.closePath();
+            delete position;
+        }
+        LEDContext.closePath();
+
+        context.fillStyle = 'rgba(21,21,21,0.15)';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context2.fillStyle = 'rgba(21,21,21,0.15)';
+        context2.fillRect(0, 0, canvas.width, canvas.height);
+        context3.fillStyle = 'rgba(21,21,21,0.15)';
+        context3.fillRect(0, 0, canvas.width, canvas.height);
+        context4.fillStyle = 'rgba(21,21,21,0.15)';
+        context4.fillRect(0, 0, canvas.width, canvas.height);
+
+        delete index;
+    }
+
+    function hitPoint(point, mx, my) {
+        var dx;
+        var dy;
+
+        dx = mx - (point.time - startingTime) * divisionNumber;
+        dy = my - point.yCoord;
+
+        if ((dx * dx + dy * dy) < 150 == true) {
+            delete dx;
+            delete dy;
+            return true;
+        }
+        return false;
+    }
+
+    function hitPoint2(point, mx, my) {
+        var dx;
+        var dy;
+        dx = mx - point.xCoord;
+        dy = my - point.yCoord;
+
+        if ((dx * dx + dy * dy) < 150 == true) {
+            delete dx;
+            delete dy;
+            return true
+        }
+        return false;
+    }
+
+    function rgb2hsv(r, g, b) {
+        //  Converts RGB value to HSV value
+        var Hue = 0;
+        var Sat = 0;
+        var Val = 0;
+
+        //  Convert to a percentage
+        r = r / 255; g = g / 255; b = b / 255;
+        var minRGB = Math.min(r, g, b);
+        var maxRGB = Math.max(r, g, b);
+
+        // Check for a grayscale image
+        if (minRGB == maxRGB) {
+            Val = parseInt((minRGB * 100) + .5); // Round up
+            return [Hue, Sat, Val];
+        }
+        var d = (r == minRGB) ? g - b : ((b == minRGB) ? r - g : b - r);
+        var h = (r == minRGB) ? 3 : ((b == minRGB) ? 1 : 5);
+        Hue = parseInt(60 * (h - d / (maxRGB - minRGB)));
+        Sat = parseInt((((maxRGB - minRGB) / maxRGB) * 100) + .5);
+        Val = parseInt((maxRGB * 100) + .5); // Round up
+        return [Hue, Sat, Val];
+    }
+
+    function hsv2rgb(h, s, v) {
+        // Set up rgb values to work with
+        var r;
+        var g;
+        var b;
+
+        // Sat and value are expressed as 0 - 100%
+        // convert them to 0 to 1 for calculations
+        s /= 100;
+        v /= 100;
+
+        if (s == 0) {
+            v = Math.round(v * 255); // Convert to 0 to 255 and return
+            return [v, v, v]; //  Grayscale, just send back value
+        }
+
+        h /= 60;   // Divide by 60 to get 6 sectors (0 to 5)
+
+        var i = Math.floor(h);  // Round down to nearest integer
+        var f = h - i;
+        var p = v * (1 - s);
+        var q = v * (1 - s * f);
+        var t = v * (1 - s * (1 - f));
+
+        // Each sector gets a different mix
+        switch (i) {
+            case 0:
+                r = v;
+                g = t;
+                b = p;
+                break;
+            case 1:
+                r = q;
+                g = v;
+                b = p;
+                break;
+            case 2:
+                r = p;
+                g = v;
+                b = t;
+                break;
+            case 3:
+                r = p;
+                g = q;
+                b = v;
+                break;
+            case 4:
+                r = t;
+                g = p;
+                b = v;
+                break;
+            default:
+                r = v;
+                g = p;
+                b = q;
+                break;
+        }
+        //  Convert all decimial values back to 0 - 255
+        return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    }
+
+    function sortArray() {
+        keyPointArray.sort(function (a, b) { return a.time - b.time });
+        keyPointArray2.sort(function (a, b) { return a.time - b.time });
+        keyPointArray3.sort(function (a, b) { return a.time - b.time });
+        keyPointArray4.sort(function (a, b) { return a.time - b.time });
+        RGBArray.sort(function (a, b) { return a.time - b.time });
+        INTArray.sort(function (a, b) { return a.time - b.time });
+    }
+
+    function drawLabels() {
+        var index = 0;
+
+        for (index = 0; index <= totalTime; index++) {
+            context4.font = '8pt Calibri';
+            context4.fillStyle = 'black';
+            context4.rect(divisionNumber * index, 0, 0.225, canvas.height);
+            context4.fillText((index + startingTime) + 's', divisionNumber * index, canvas.height - 30);
+        }
+    }
+
+    function render() {
+        if (playIndex > keyPointArray[keyPointArray.length - 1].time * divisionNumber) {
+            stop();
+
+        }
+        else {
+            divisionNumber = (canvas.width) / (zoomArray[1].time - zoomArray[0].time);
+            startingTime = zoomArray[0].time;
+
+            if (playIndex <= 0) {
+                myObject.rotation.y = 0;
+                neck1.rotation.z = 0
+                neck2.rotation.z = 0;
+                neck3.rotation.z = 0;
+            }
+            else {
+                myObject.rotation.y = convertToYValue(canvas, getYValue(keyPointArray, playIndex + startingTime * divisionNumber)) * Math.PI;
+                neck1.rotation.z = convertToYValue(canvas2, getYValue(keyPointArray2, playIndex + startingTime * divisionNumber)) * (Math.PI / 3);
+                neck2.rotation.z = convertToYValue(canvas3, getYValue(keyPointArray3, playIndex + startingTime * divisionNumber)) * (Math.PI / 3);
+                neck3.rotation.z = convertToYValue(canvas4, getYValue(keyPointArray4, playIndex + startingTime * divisionNumber)) * (Math.PI / 3);
+            }
+            getPosition();
+
+
+            canvas.width = canvas.width;
+            canvas2.width = canvas2.width;
+            canvas3.width = canvas3.width;
+            canvas4.width = canvas4.width;
+            canvas5.width = canvas5.width;
+            zoomCanvas.width = zoomCanvas.width;
+            LEDCanvas.width = LEDCanvas.width;
+
+            context5.fillStyle = "#212121";
+            context5.fillRect(0, 0, canvas5.width, canvas5.height);
+            context5.fillStyle = "#FF0000";
+            context5.fillRect(playIndex - 7.5, canvas5.height / 4, 15, canvas5.height / 2);
+
+
+
+            setUp();
+            plotKeyPoint();
+            drawLabels();
+            renderer.render(scene, camera);
+        }
+    }
+
+    function play() {
+        return setInterval(function () {
+            playIndex++;
+        }, 19);
+    }
+
+    function start() {
+        startingTime = 0;
+        zoomCanvas.width = zoomCanvas.width;
+        zoomArray[0].xCoord = 0;
+        zoomArray[1].xCoord = zoomCanvas.width;
+        zoomArray[0].time = 0;
+        zoomArray[1].time = zoomCanvas.width / originalDivisionNumber
+
+        divisionNumber = canvas.width / 30;
+        render();
+        playIndex = 0;
+        id = play();
+    }
+
+    function stop() {
+        window.clearInterval(id);
+        playIndex = 0;
+        canvas.width = canvas.width;
+        render();
+    }
+
+    function getPosition() {
+
+        myNeck2.position.x = ((Math.sin(myObject.rotation.z)) * 16) * (-Math.cos(myObject.rotation.y).toPrecision(20));
+        myNeck2.position.y = (Math.cos(myObject.rotation.z) * 16);
+        myNeck2.position.z = (-(Math.tan(myObject.rotation.y).toPrecision(20)) * neck1.position.x);
+
+        myNeck3.position.x = ((Math.sin(myObject.rotation.z)) * 16) * (-Math.cos(myObject.rotation.y).toPrecision(20));
+        myNeck3.position.y = (Math.cos(myObject.rotation.z) * 16);
+        myNeck3.position.z = (-(Math.tan(myObject.rotation.y).toPrecision(20)) * neck2.position.x);
+
+        myNeck4.position.x = ((Math.sin(myObject.rotation.z)) * 16) * (-Math.cos(myObject.rotation.y).toPrecision(20));
+        myNeck4.position.y = (Math.cos(myObject.rotation.z) * 16);
+        myNeck4.position.z = (-(Math.tan(myObject.rotation.y).toPrecision(20)) * neck3.position.x);
+    }
+
+    function getYValue(array, timeValue) {//return the y-Value of the line at a given x-value (time)
+        var pointIndex;
+        var currentGradient = 0;
+        var y = 0;
+
+        for (positionIndex = 0; positionIndex < array.length; positionIndex++) {
+            if (timeValue < array[positionIndex].time * divisionNumber) {
+                pointIndex = positionIndex;
+                break;
+            }
+        }
+        try {
+            currentGradient = (array[pointIndex].yCoord - array[pointIndex - 1].yCoord) / ((array[pointIndex].time * divisionNumber) - (array[pointIndex - 1].time * divisionNumber));
+        }
+        catch (err) {
+            return 0;
+        }
+
+        try {
+            y = currentGradient * (timeValue - (array[pointIndex - 1].time * divisionNumber)) + array[pointIndex - 1].yCoord;
+        }
+        catch (err) {
+            return 0;
+        }
+
+        return y;
+    }
+
+    canvas.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        toDelete = false
+        currentMousePos = getCurrentMousePos(canvas, evt);
+
+        for (searchIndex; searchIndex < keyPointArray.length; searchIndex++) {
+            if (hitPoint(keyPointArray[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true;
+                if (deleteIndex === hitIndex) {
+                    keyPointArray.splice(deleteIndex, 1);
+                    hitIndex = null;
+                    deleteIndex = null;
+                }
+                else {
+                    if (hitIndex === 0 || hitIndex === keyPointArray.length - 1) {
+                    }
+                    else {
+                        deleteIndex = hitIndex;
+                    }
+
+                    window.setTimeout(function () {
+                        deleteIndex = null;
+                    }, 400);
+                }
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray[keyPointArray.length] = keyPoint;
+        }
+        canvas.width = canvas.width;
+        sortArray();
+        render();
+    }
+
+    canvas.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas, evt);
+        if (draging == true) {
+            if (keyPointArray[hitIndex].time * divisionNumber != 0 && keyPointArray[hitIndex].time * divisionNumber != canvas.width) {
+                keyPointArray[hitIndex].time = convertToTimeValue(currentMousePos.x) + startingTime;
+            }
+
+            keyPointArray[hitIndex].yCoord = currentMousePos.y;
+            canvas.width = canvas.width;
+            deleteIndex = null;
+            render();
+        }
+    }
+
+    canvas.onmouseup = function (evt) {
+        draging = false;
+        hitIndex = null;
+        canvas.width = canvas.width;
+        sortArray();
+        render();
+    }
+
+    canvas2.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        toDelete = false;
+        currentMousePos = getCurrentMousePos(canvas2, evt);
+
+        for (searchIndex; searchIndex < keyPointArray2.length; searchIndex++) {
+            if (hitPoint(keyPointArray2[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true; if (deleteIndex === hitIndex) {
+                    keyPointArray2.splice(deleteIndex, 1);
+                    hitIndex = null;
+                    deleteIndex = null;
+                }
+                else {
+                    if (hitIndex === 0 || hitIndex === keyPointArray2.length - 1) {
+                    }
+                    else {
+                        deleteIndex = hitIndex;
+                    }
+                    window.setTimeout(function () {
+                        deleteIndex = null;
+                    }, 400);
+                }
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray2[keyPointArray2.length] = keyPoint;
+        }
+        canvas2.width = canvas2.width;
+        sortArray();
+        render();
+    }
+
+    canvas2.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas2, evt);
+        if (draging == true) {
+            if (keyPointArray2[hitIndex].time * divisionNumber != 0 && keyPointArray2[hitIndex].time * divisionNumber != canvas.width) {
+                keyPointArray2[hitIndex].time = convertToTimeValue(currentMousePos.x) + startingTime;
+            }
+            keyPointArray2[hitIndex].yCoord = currentMousePos.y;
+            canvas2.width = canvas2.width;
+            deleteIndex = null;
+            render();
+        }
+    }
+
+    canvas2.onmouseup = function (evt) {
+        draging = false;
+        hitIndex = null;
+        canvas2.width = canvas2.width;
+        sortArray();
+        render();
+    }
+
+    canvas3.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        toDelete = false;
+        currentMousePos = getCurrentMousePos(canvas3, evt);
+
+        for (searchIndex; searchIndex < keyPointArray3.length; searchIndex++) {
+            if (hitPoint(keyPointArray3[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true; if (deleteIndex === hitIndex) {
+                    keyPointArray3.splice(deleteIndex, 1);
+                    hitIndex = null;
+                    deleteIndex = null;
+                }
+                else {
+                    if (hitIndex === 0 || hitIndex === keyPointArray3.length - 1) {
+                    }
+                    else {
+                        deleteIndex = hitIndex;
+                    }
+                    window.setTimeout(function () {
+                        deleteIndex = null;
+                    }, 400);
+                }
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray3[keyPointArray3.length] = keyPoint;
+        }
+        canvas3.width = canvas3.width;
+        sortArray();
+        render();
+    }
+
+    canvas3.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas3, evt);
+        if (draging == true) {
+            if (keyPointArray3[hitIndex].time * divisionNumber != 0 && keyPointArray3[hitIndex].time * divisionNumber != canvas.width) {
+                keyPointArray3[hitIndex].time = convertToTimeValue(currentMousePos.x) + startingTime;
+            }
+            keyPointArray3[hitIndex].yCoord = currentMousePos.y;
+            canvas3.width = canvas3.width;
+            deleteIndex = null;
+            render();
+        }
+    }
+
+    canvas3.onmouseup = function (evt) {
+        draging = false;
+        hitIndex = null;
+        canvas3.width = canvas3.width;
+        sortArray();
+        render();
+    }
+
+    canvas4.onmousedown = function (evt) {
+        var searchIndex = 0;
+        pointHit = false;
+        draging = false;
+        toDelete = false;
+        currentMousePos = getCurrentMousePos(canvas4, evt);
+
+        for (searchIndex; searchIndex < keyPointArray4.length; searchIndex++) {
+            if (hitPoint(keyPointArray4[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true; if (deleteIndex === hitIndex) {
+                    keyPointArray4.splice(deleteIndex, 1);
+                    hitIndex = null;
+                    deleteIndex = null;
+                }
+                else {
+                    if (hitIndex === 0 || hitIndex === keyPointArray4.length - 1) {
+                    }
+                    else {
+                        deleteIndex = hitIndex;
+                    }
+                    window.setTimeout(function () {
+                        deleteIndex = null;
+                    }, 400); //for adding clock to reset
+                }
+                delete searchIndex;
+                break;
+            }
+        }
+
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray4[keyPointArray4.length] = keyPoint;
+        }
+
+        canvas4.width = canvas4.width;
+        sortArray();
+        render();
+    }
+
+    canvas4.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas4, evt);
+        if (draging == true) {
+            if (keyPointArray4[hitIndex].time * divisionNumber != 0 && keyPointArray4[hitIndex].time * divisionNumber != canvas4.width) {
+                keyPointArray4[hitIndex].time = convertToTimeValue(currentMousePos.x) + startingTime;
+            }
+            keyPointArray4[hitIndex].yCoord = currentMousePos.y;
+            canvas4.width = canvas4.width;
+            deleteIndex = null;
+            render();
+        }
+    }
+
+    canvas4.onmouseup = function (evt) {
+        draging = false;
+        hitIndex = null;
+        canvas4.width = canvas4.width;
+        sortArray();
+        render();
+    }
+
+    canvas5.onmousedown = function (evt) {
+        var mousePos = getCurrentMousePos(canvas5, evt);
+        draging = true;
+        playIndex = mousePos.x;
+        render()
+    }
+
+    canvas5.onmousemove = function (evt) {
+        if (draging) {
+            var mousePos = getCurrentMousePos(canvas5, evt);
+            draging = true;
+            playIndex = mousePos.x;
+            render();
+        }
+    }
+
+    canvas5.onmouseup = function (evt) {
+        var mousePos = getCurrentMousePos(canvas5, evt);
+        playIndex = mousePos.x;
+        draging = false;
+        render()
+
+    }
+
+    LEDCanvas.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        toDelete = false
+        currentMousePos = getCurrentMousePos(LEDCanvas, evt);
+
+        for (searchIndex; searchIndex < RGBArray.length; searchIndex++) {
+            if (hitPoint(RGBArray[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true;
+                if (hitPoint(INTArray[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                    intDragging = true
+                }
+                if (deleteIndex === hitIndex) {
+                    RGBArray.splice(deleteIndex, 1);
+                    INTArray.splice(deleteIndex, 1);
+                    hitIndex = null;
+                    deleteIndex = null;
+                }
+                else {
+                    if (hitIndex === 0 || hitIndex === RGBArray.length - 1) {
+                    }
+                    else {
+                        deleteIndex = hitIndex;
+                    }
+
+                    window.setTimeout(function () {
+                        deleteIndex = null;
+                    }, 400);
+                }
+                break;
+            }
+
+            if (hitPoint(INTArray[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = false;
+                if (hitPoint(INTArray[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                    intDragging = true
+                }
+                if (deleteIndex === hitIndex) {
+                    RGBArray.splice(deleteIndex, 1);
+                    INTArray.splice(deleteIndex, 1);
+                    hitIndex = null;
+                    deleteIndex = null;
+                }
+                else {
+                    if (hitIndex === 0 || hitIndex === RGBArray.length - 1) {
+                    }
+                    else {
+                        deleteIndex = hitIndex;
+                    }
+
+                    window.setTimeout(function () {
+                        deleteIndex = null;
+                    }, 400);
+                }
+                break;
+            }
+        }
+
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'grey');
+            var keypoint2 = new KeyPoint(currentMousePos.x, 0, 'white');
+            INTArray[INTArray.length] = keypoint2;
+            RGBArray[RGBArray.length] = keyPoint;
+            console.log(INTArray[INTArray.length - 1].brightnessValue)
+        }
+        canvas.width = canvas.width;
+        sortArray();
+        render();
+
+    }
+
+
+    LEDCanvas.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(LEDCanvas, evt);
+        if (draging == true) {
+            if (RGBArray[hitIndex].time * divisionNumber != 0 && RGBArray[hitIndex].time * divisionNumber != canvas.width) {
+                RGBArray[hitIndex].time = convertToTimeValue(currentMousePos.x) + startingTime;
+                INTArray[hitIndex].time = convertToTimeValue(currentMousePos.x) + startingTime;
+            }
+            RGBArray[hitIndex].yCoord = currentMousePos.y;
+
+            var RGB = LEDContext.getImageData(currentMousePos.x, currentMousePos.y, 1, 1);
+            //optionals for color timeline
+            RGBArray[hitIndex].HSV = rgb2hsv(RGB.data[0], RGB.data[1], RGB.data[2]);
+            RGBArray[hitIndex].hueValue = RGBArray[hitIndex].HSV[0];
+            RGBArray[hitIndex].saturation = RGBArray[hitIndex].HSV[1];
+            RGBArray[hitIndex].brightnessValue = INTArray[hitIndex].brightnessValue;
+
+            var rgbValues = hsv2rgb(RGBArray[hitIndex].hueValue, RGBArray[hitIndex].saturation, RGBArray[hitIndex].brightnessValue);
+
+            RGBArray[hitIndex].redValue = rgbValues[0]
+            RGBArray[hitIndex].greenValue = rgbValues[1]
+            RGBArray[hitIndex].blueValue = rgbValues[2]
+
+            LEDCanvas.width = LEDCanvas.width;
+            deleteIndex = null;
+            console.log(RGBArray[hitIndex].redValue + 'red ' +
+            RGBArray[hitIndex].greenValue + 'green ' +
+            RGBArray[hitIndex].blueValue + 'blue ')
+
+            render();
+        }
+
+        if (intDragging == true) {
+            INTArray[hitIndex].yCoord = currentMousePos.y;
+            INTArray[hitIndex].brightnessValue = convertToYValue(LEDCanvas, currentMousePos.y) * 100;
+            RGBArray[hitIndex].brightnessValue = INTArray[hitIndex].brightnessValue;
+
+            var rgbValues = hsv2rgb(RGBArray[hitIndex].hueValue, RGBArray[hitIndex].saturation, RGBArray[hitIndex].brightnessValue);
+
+            RGBArray[hitIndex].redValue = rgbValues[0]
+            RGBArray[hitIndex].greenValue = rgbValues[1]
+            RGBArray[hitIndex].blueValue = rgbValues[2]
+
+            LEDCanvas.width = LEDCanvas.width;
+            deleteIndex = null;
+            console.log(RGBArray[hitIndex].redValue + 'red ' +
+            RGBArray[hitIndex].greenValue + 'green ' +
+            RGBArray[hitIndex].blueValue + 'blue ')
+
+
+            LEDCanvas.width = LEDCanvas.width;
+            deleteIndex = null;
+
+
+            render();
+        }
+    }
+
+    LEDCanvas.onmouseup = function (evt) {
+        draging = false;
+        hitIndex = null;
+        intDragging = false;
+        LEDCanvas.width = LEDCanvas.width;
+        sortArray();
+        render();
+    }
+
+    zoomCanvas.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        currentMousePos = getCurrentMousePos(zoomCanvas, evt);
+
+        for (searchIndex; searchIndex < 2; searchIndex++) {
+            if (hitPoint2(zoomArray[searchIndex], currentMousePos.x, currentMousePos.y) === true) {
+                zoomHitIndex = searchIndex;
+                pointHit = true;
+                zoomDragging = true;
+                delete searchIndex;
+                break;
+            }
+            else if (currentMousePos.x >= zoomArray[0].xCoord + 13 && currentMousePos.x <= zoomArray[1].xCoord - 13) {
+                moveDrag = true;
+                clickx = currentMousePos.x;
+                originalX0 = zoomArray[0].xCoord;
+                originalX1 = zoomArray[1].xCoord;
+            }
+        }
+        delete searchIndex;
+    }
+
+    zoomCanvas.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas2, evt);
+        if (zoomDragging == true) {
+            zoomArray[zoomHitIndex].xCoord = currentMousePos.x
+            zoomArray[zoomHitIndex].time = currentMousePos.x / originalDivisionNumber;
+            zoomCanvas.width = zoomCanvas.width;
+        }
+
+        else if (moveDrag) {
+            offsetx = clickx - currentMousePos.x;
+            if (originalX0 - offsetx >= 0) {
+                if (originalX1 - offsetx <= zoomCanvas.width) {
+                    zoomArray[0].xCoord = originalX0 - offsetx;
+                    zoomArray[1].xCoord = originalX1 - offsetx;
+                    zoomArray[0].time = zoomArray[0].xCoord / originalDivisionNumber;
+                    zoomArray[1].time = zoomArray[1].xCoord / originalDivisionNumber;
+                }
+            }
+        }
+    }
+
+    zoomCanvas.onmouseup = function (evt) {
+        zoomDragging = false;
+        moveDrag = false;
+        zoomHitIndex = null;
+    }
+
+    canvas.onmouseout = function () {
+        draging = false
+    }
+
+    canvas2.onmouseout = function () {
+        draging = false
+    }
+
+    canvas3.onmouseout = function () {
+        draging = false
+    }
+
+    canvas4.onmouseout = function () {
+        draging = false
+    }
+
+    canvas5.onmouseout = function () {
+        draging = false
+    }
+
+    zoomCanvas.onmouseout = function () {
+        zoomDragging = false;
+        zoomCanvas.width = zoomCanvas.width;
+        zoomHitIndex = null;
+    }
+
+</script>

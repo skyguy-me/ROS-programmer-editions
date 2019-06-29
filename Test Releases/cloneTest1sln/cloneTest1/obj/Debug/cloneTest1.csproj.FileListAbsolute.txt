@@ -1,0 +1,6 @@
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\cloneTest1sln\cloneTest1\bin\cloneTest1.dll.config
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\cloneTest1sln\cloneTest1\bin\cloneTest1.dll
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\cloneTest1sln\cloneTest1\bin\cloneTest1.pdb
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\cloneTest1sln\cloneTest1\obj\Debug\cloneTest1.csprojResolveAssemblyReference.cache
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\cloneTest1sln\cloneTest1\obj\Debug\cloneTest1.dll
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\cloneTest1sln\cloneTest1\obj\Debug\cloneTest1.pdb

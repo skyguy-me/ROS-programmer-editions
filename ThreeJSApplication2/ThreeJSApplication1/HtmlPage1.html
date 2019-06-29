@@ -1,0 +1,540 @@
+﻿<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>timeLine + Animmation</title>
+    <script src="three.min.js"></script>
+    <script src="three.js"></script>
+
+    <style>
+    </style>
+</head>
+<body onload="init()">
+    <canvas id="timeLineCanvas" width="1500" height="125"></canvas>
+    <canvas id="timeLineCanvas2" width="1500" height="125"></canvas>
+    <canvas id="timeLineCanvas3" width="1500" height="125"></canvas>
+    <!--<canvas id="timeLineCanvas4" width="1500" height="125"></canvas>-->
+    <!-- Div which will hold the Output -->
+    <div id="WebGL-output">
+    </div>
+    <button id="playButton" style="width:60px;height:30px;" onclick="start()">►</button>
+    <button id="ST0Pbutton" style="width:60px;height:30px;" onclick="stop()">■</button>
+</body>
+</html>
+
+<script type="text/javascript">
+    /*
+    */
+
+    //global objects
+    var canvas = document.getElementById("timeLineCanvas");
+    var context = canvas.getContext('2d');
+
+    var canvas2 = document.getElementById("timeLineCanvas2");
+    var context2 = canvas2.getContext('2d');
+
+    var canvas3 = document.getElementById("timeLineCanvas3");
+    var context3 = canvas3.getContext('2d');
+
+    //var canvas4 = document.getElementById("timeLineCanvas4");
+    //var context4 = canvas3.getContext('2d');
+
+    var keyPointArray = [];
+    var keyPointArray2 = [];
+    var keyPointArray3 = [];
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000);
+    var renderer = new THREE.WebGLRenderer()
+    var cubeGeometry = new THREE.BoxGeometry(2, 16, 2);
+    cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));// to change pivot location
+    var cubeMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+    var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+
+
+    var cyliderGeo = new THREE.CylinderGeometry(4, 4, 2, 200, 200);
+    cyliderGeo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 0, 0));
+    var cubeMaterial = new THREE.MeshLambertMaterial({ color: 0x000000 });
+    var cylinder = new THREE.Mesh(cyliderGeo, cubeMaterial);
+
+    cylinder.position.x = 0;
+    cylinder.position.Y = 0;
+    cylinder.position.Z = 0;
+
+
+    var neckGeo = new THREE.BoxGeometry(2, 16, 2, 200, 200);
+    neckGeo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neckMaterial = new THREE.MeshLambertMaterial({ color: 0x76EE00 });
+    var neck = new THREE.Mesh(neckGeo, neckMaterial);
+
+    var neck2Geo = new THREE.BoxGeometry(2, 16, 2, 200, 200);
+    neck2Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck2Material = new THREE.MeshLambertMaterial({ color: 0x999999 });
+    var neck2 = new THREE.Mesh(neck2Geo, neck2Material);
+
+    var dummyObject1 = new THREE.Object3D(); //base to cube
+    var dummyObject2 = new THREE.Object3D(); //cube to neck1
+
+    var spotLight = new THREE.SpotLight(0xffffff);
+
+    //global variables
+    var currentMousePos; //x & y-cordinate of cursor
+    var draging = false; //whether a drag event is occuring
+    var pointHit = false; //whether there is a existing point at click position
+    var hitIndex; //for keeping track of hit events
+    var divisionNumber = canvas.width / 10;//to create 10 one second divisions. Chanmge this variable to change the timeline's time value
+
+    var maxPositionValue = 25;//max value of graph
+    var minPositionValue = -25;//minimum value of graph
+    var playIndex = 0; //to get the position at which the timer is playing
+
+    context.fillStyle = '#9eabb8';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context2.fillStyle = '#9eabb8';
+    context2.fillRect(0, 0, canvas.width, canvas.height);
+    context3.fillStyle = '#9eabb8';
+    context3.fillRect(0, 0, canvas.width, canvas.height);
+
+    var object = new THREE.Object3D();
+
+    function init() {
+        renderer.setClearColor(new THREE.Color(0xEEEEEE, 1.0));
+        renderer.setSize(1500, 500);
+
+        neck.position.x = 0;
+        neck.position.y = 16;
+        neck.position.z = 0;
+
+        cylinder.add(dummyObject1);
+
+        dummyObject1.add(cube);
+
+        dummyObject1.position.x = 0;
+        dummyObject1.position.y = 2;
+        dummyObject1.position.z = 0;
+
+
+        dummyObject1.add(dummyObject2);
+        dummyObject2.add(neck);
+
+        scene.add(cylinder);
+
+        // position and point the camera to the center of the scene
+        camera.position.x = -70;
+        camera.position.y = 80;
+        camera.position.z = 60;
+        camera.lookAt(scene.position);
+
+        // add spotlight for the shadows
+
+        spotLight.position.set(0, 0, 100);
+        spotLight.castShadow = true;
+        scene.add(spotLight);
+
+        // add the output of the renderer to the html element
+        document.getElementById("WebGL-output").appendChild(renderer.domElement);
+        render();
+    }
+
+    function setUp() { //clear and reset canvas
+        var index = 0;
+        for (index = 0; index < divisionNumber; index++) {
+
+            context.fillStyle = 'black';
+            context.rect(divisionNumber * index, 0, 0.225, canvas.height);
+
+            context2.fillStyle = 'black';
+            context2.rect(divisionNumber * index, 0, 0.225, canvas.height);
+
+
+            context3.fillStyle = 'black';
+            context3.rect(divisionNumber * index, 0, 0.225, canvas.height);
+
+
+        }
+        context.fillStyle = "#FF0000";
+        context.rect(playIndex, 0, 2, canvas.height);//to draw a moving timeLine
+        context.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+
+        context2.fillStyle = "#FF0000";
+        context2.rect(playIndex, 0, 2, canvas.height);//to draw a moving timeLine
+        context2.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context2.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context2.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+
+        context3.fillStyle = "#FF0000";
+        context3.rect(playIndex, 0, 2, canvas.height);//to draw a moving timeLine
+        context3.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context3.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context3.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+
+        delete index;
+    }
+
+    function convertToXValue(value) {
+        return value / divisionNumber;
+    }
+
+    function convertToYValue(value) {
+        if (value > canvas.height / 2) {
+            return (value - canvas.height / 2) / (canvas.height / 2) * minPositionValue;
+        }
+        else if (value == canvas.height / 2) {
+            return 0;
+        }
+        else {
+            return (canvas.height / 2 - value) / (canvas.height / 2) * maxPositionValue;
+        }
+    }
+
+
+    function KeyPoint(xCoord, yCoord, color) { //keyPointObject Skeleton
+        this.xCoord = xCoord;
+        this.yCoord = yCoord;
+        this.radius = 9.0;
+        this.color = color;
+        this.angle = convertToYValue(yCoord);
+        function setColor(setColour) {
+            color = setColor;
+            return color;
+        }
+    }
+
+    keyPointArray[0] = new KeyPoint(0, canvas.height / 2, 'blue');//add first point to Array
+    keyPointArray[1] = new KeyPoint(canvas.width, canvas.height / 2, 'blue')//add first point to Array
+
+    keyPointArray2[0] = new KeyPoint(0, canvas2.height / 2, 'red');//add first point to Array
+    keyPointArray2[1] = new KeyPoint(canvas2.width, canvas2.height / 2, 'red');//add first point to Array
+
+    keyPointArray3[0] = new KeyPoint(0, canvas3.height / 2, 'green');//add first point to Array
+    keyPointArray3[1] = new KeyPoint(canvas3.width, canvas3.height / 2, 'green');//add first point to Array
+
+
+
+    function getCurrentMousePos(canvas, evt) {//return X&Y of current mousePosition
+        var rect = canvas.getBoundingClientRect();
+
+        return {
+            x: Math.round((evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width),
+            y: Math.round((evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height)
+        };
+    }
+
+    function plotKeyPoint() {//to plot keyPoints onCanvas
+        //local variables
+        var index = 0;
+        //
+        context.clearRect(0, 0, canvas.width, canvas.height); //clear canvas and move to first coordinate's center
+        context.moveTo(keyPointArray[0].xCoord, keyPointArray[0].yCoord);
+
+        for (index; index < keyPointArray.length; index++) {
+            var position = keyPointArray[index];
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.arc(position.xCoord, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context.moveTo(position.xCoord, position.yCoord);
+            context.stroke();
+            context.fillStyle = position.color;
+            context.fill();
+            context.moveTo(position.xCoord, position.yCoord);
+            delete position;
+        }
+        for (index = 0; index < keyPointArray2.length; index++) {
+            var position = keyPointArray2[index];
+            context2.clearRect(0, 0, canvas2.width, canvas2.height);
+            context2.arc(position.xCoord, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context2.moveTo(position.xCoord, position.yCoord);
+            context2.stroke();
+            context2.fillStyle = position.color;
+            context2.fill();
+            context2.moveTo(position.xCoord, position.yCoord);
+            delete position;
+        }
+        for (index = 0; index < keyPointArray3.length; index++) {
+            var position = keyPointArray3[index];
+            context3.clearRect(0, 0, canvas3.width, canvas3.height);
+            context3.arc(position.xCoord, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context3.moveTo(position.xCoord, position.yCoord);
+            context3.stroke();
+            context3.fillStyle = position.color;
+            context3.fill();
+            context3.moveTo(position.xCoord, position.yCoord);
+            delete position;
+        }
+        delete index;
+    }
+
+    function hitPoint(point, mx, my) {
+        var dx;
+        var dy;
+        dx = mx - point.xCoord;
+        dy = my - point.yCoord;
+
+        if ((dx * dx + dy * dy) < 150 == true) {
+            delete dx;
+            delete dy;
+            return true
+        }
+        return false;
+    }
+
+    function sortArray() {
+        keyPointArray.sort(function (a, b) { return a.xCoord - b.xCoord });
+        keyPointArray2.sort(function (a, b) { return a.xCoord - b.xCoord });
+        keyPointArray3.sort(function (a, b) { return a.xCoord - b.xCoord });
+    }
+
+    canvas.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        currentMousePos = getCurrentMousePos(canvas, evt);
+
+        for (searchIndex; searchIndex < keyPointArray.length; searchIndex++) {
+            if (hitPoint(keyPointArray[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true;
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray[keyPointArray.length] = keyPoint;
+        }
+        canvas.width = canvas.width;
+        sortArray();
+        render();
+    }
+
+    canvas.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas, evt);
+        if (draging == true) {
+            if (keyPointArray[hitIndex].xCoord != 0) {
+                keyPointArray[hitIndex].xCoord = currentMousePos.x;
+            }
+            keyPointArray[hitIndex].yCoord = currentMousePos.y;
+            canvas.width = canvas.width;
+            render();
+        }
+    }
+
+    function drawLabels() {
+        var index = 0;
+        for (index = 0; index < divisionNumber; index++) {
+
+            context2.font = '10pt Calibri';
+            context2.fillStyle = 'black';
+            context2.rect(divisionNumber * index, 0, 0.225, canvas.height);
+            context2.fillText(index + 'sec', divisionNumber * index, canvas.height - 30);
+        }
+    }
+    canvas.onmouseup = function (evt) {
+        draging = false;
+        canvas.width = canvas.width;
+        sortArray();
+        render();
+    }
+
+    canvas2.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        currentMousePos = getCurrentMousePos(canvas2, evt);
+
+        for (searchIndex; searchIndex < keyPointArray2.length; searchIndex++) {
+            if (hitPoint(keyPointArray2[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true;
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray2[keyPointArray2.length] = keyPoint;
+        }
+        canvas2.width = canvas2.width;
+        sortArray();
+        render();
+    }
+
+    canvas2.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas2, evt);
+        if (draging == true) {
+            if (keyPointArray2[hitIndex].xCoord != 0) {
+                keyPointArray2[hitIndex].xCoord = currentMousePos.x;
+            }
+            keyPointArray2[hitIndex].yCoord = currentMousePos.y;
+            canvas2.width = canvas2.width;
+            render();
+        }
+    }
+
+    canvas2.onmouseup = function (evt) {
+        draging = false;
+        canvas2.width = canvas2.width;
+        sortArray();
+        render();
+    }
+
+    canvas3.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        currentMousePos = getCurrentMousePos(canvas3, evt);
+
+        for (searchIndex; searchIndex < keyPointArray3.length; searchIndex++) {
+            if (hitPoint(keyPointArray3[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true;
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray3[keyPointArray3.length] = keyPoint;
+        }
+        canvas3.width = canvas3.width;
+        sortArray();
+        render();
+    }
+
+    canvas3.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas3, evt);
+        if (draging == true) {
+            if (keyPointArray3[hitIndex].xCoord != 0) {
+                keyPointArray3[hitIndex].xCoord = currentMousePos.x;
+            }
+            keyPointArray3[hitIndex].yCoord = currentMousePos.y;
+            canvas3.width = canvas3.width;
+            render();
+        }
+    }
+
+    canvas3.onmouseup = function (evt) {
+        draging = false;
+        canvas3.width = canvas3.width;
+        sortArray();
+        render();
+    }
+
+    function render() {
+        if (playIndex > keyPointArray[keyPointArray.length - 1].xCoord) {
+            stop();
+        }
+        else {
+            cylinder.rotation.y = convertToYValue(getYValue(playIndex)) / 25 * Math.PI;
+            cube.rotation.z = convertToYValue(getYValue2(playIndex)) / 32;
+            neck.rotation.z = convertToYValue(getYValue3(playIndex)) / 16;
+
+            getPosition();
+
+            canvas.width = canvas.width;
+            canvas2.width = canvas2.width;
+            canvas3.width = canvas3.width;
+            renderer.render(scene, camera);
+            setUp();
+            plotKeyPoint();
+            drawLabels();
+        }
+    }
+
+
+
+    function play() {
+        return setInterval(function () {
+            playIndex++;
+            render();
+        }, (1 / (canvas.width / divisionNumber)).toPrecision(20));
+    }
+
+    function start() {
+        id = play();
+    }
+
+    function stop() {
+        window.clearInterval(id);
+        playIndex = 0;
+        canvas.width = canvas.width;
+        render();
+        delete id;
+    }
+
+
+    function getPosition() {
+
+
+
+        cube.rotation.y = cylinder.rotation.y;
+        cube.rotation.x = cylinder.rotation.x;
+        neck.rotation.y = cylinder.rotation.y;
+        neck.rotation.x = cylinder.rotation.x;
+
+        cube.position.y = cylinder.position.y;
+        cube.position.z = cylinder.position.z;
+        cube.position.x = cylinder.position.x;
+
+
+        //first neck
+        neck.position.x = ((Math.sin(convertToYValue(getYValue2(playIndex)) / 32)) * 16) * (-Math.cos(cylinder.rotation.y).toPrecision(20));
+        neck.position.y = ((Math.cos(convertToYValue(getYValue2(playIndex)) / 32)) * 16);// l is constant when rottating about z-axis
+        neck.position.z = (-(Math.tan(cylinder.rotation.y).toPrecision(20)) * neck.position.x);
+    }
+
+    function getYValue(timeValue) {//return the y-Value of the line at a given x-value (time)
+        var pointIndex;
+        var currentGradient = 0;
+        var y = 0;
+        for (positionIndex = 0; positionIndex < keyPointArray.length; positionIndex++) {
+            if (timeValue < keyPointArray[positionIndex].xCoord) {
+                pointIndex = positionIndex;
+                break;
+            }
+        }
+        currentGradient = (keyPointArray[pointIndex].yCoord - keyPointArray[pointIndex - 1].yCoord) / (keyPointArray[pointIndex].xCoord - keyPointArray[pointIndex - 1].xCoord);
+        y = currentGradient * (timeValue - keyPointArray[pointIndex - 1].xCoord) + keyPointArray[pointIndex - 1].yCoord;
+        return y;
+    }
+    function getYValue2(timeValue) {//return the y-Value of the line at a given x-value (time)
+        var pointIndex;
+        var currentGradient = 0;
+        var y = 0;
+        for (positionIndex = 0; positionIndex < keyPointArray2.length; positionIndex++) {
+            if (timeValue < keyPointArray2[positionIndex].xCoord) {
+                pointIndex = positionIndex;
+                break;
+            }
+        }
+        currentGradient = (keyPointArray2[pointIndex].yCoord - keyPointArray2[pointIndex - 1].yCoord) / (keyPointArray2[pointIndex].xCoord - keyPointArray2[pointIndex - 1].xCoord);
+        y = currentGradient * (timeValue - keyPointArray2[pointIndex - 1].xCoord) + keyPointArray2[pointIndex - 1].yCoord;
+        return y;
+    }
+    function getYValue3(timeValue) {//return the y-Value of the line at a given x-value (time)
+        var pointIndex;
+        var currentGradient = 0;
+        var y = 0;
+        for (positionIndex = 0; positionIndex < keyPointArray3.length; positionIndex++) {
+            if (timeValue < keyPointArray3[positionIndex].xCoord) {
+                pointIndex = positionIndex;
+                break;
+            }
+        }
+        currentGradient = (keyPointArray3[pointIndex].yCoord - keyPointArray3[pointIndex - 1].yCoord) / (keyPointArray3[pointIndex].xCoord - keyPointArray3[pointIndex - 1].xCoord);
+        y = currentGradient * (timeValue - keyPointArray3[pointIndex - 1].xCoord) + keyPointArray3[pointIndex - 1].yCoord;
+        return y;
+    }
+
+</script>

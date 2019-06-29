@@ -1,0 +1,819 @@
+﻿<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>timeLine+Animmation</title>
+    <script src="Scripts/three.js"></script>
+</head>
+<body onload="init()">
+    <canvas id="zoomLevelCanvas" width="1500" height="40"></canvas>
+    <canvas id="rotationTimeLineCanvas" width="1500" height="150"></canvas>
+    <canvas id="neck1TimeLineCanvas" width="1500" height="150"></canvas>
+    <canvas id="neck2TimeLineCanvas" width="1500" height="150"></canvas>
+    <canvas id="neck3TimeLineCanvas" width="1500" height="150"></canvas>
+    <canvas id="timePositionCanvas" width="1500" height="35"></canvas>
+    <!-- Div which will hold the Output -->
+    <div id="WebGL-output"></div>
+    <button id="playButton" style="width:60px;height:30px;" onclick="start()">►</button>
+    <button id="ST0Pbutton" style="width:60px;height:30px;" onclick="stop()">■</button>
+
+</body>
+</html>
+
+<script type="text/javascript">
+    /*
+    */
+    //global objects
+    var canvas = document.getElementById("rotationTimeLineCanvas");
+    var context = canvas.getContext('2d');
+
+    var canvas2 = document.getElementById("neck1TimeLineCanvas");
+    var context2 = canvas2.getContext('2d');
+
+    var canvas3 = document.getElementById("neck2TimeLineCanvas");
+    var context3 = canvas3.getContext('2d');
+
+
+    var canvas4 = document.getElementById("neck3TimeLineCanvas");
+    var context4 = canvas4.getContext('2d');
+
+    var canvas5 = document.getElementById('timePositionCanvas');
+    var context5 = canvas5.getContext('2d');
+
+    var zoomCanvas = document.getElementById('zoomLevelCanvas');
+    var zoomContext = zoomCanvas.getContext('2d');
+
+
+    var keyPointArray = [];
+    var keyPointArray2 = [];
+    var keyPointArray3 = [];
+    var keyPointArray4 = [];
+    var zoomArray = [];
+
+    var material1 = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+    var material2 = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+    var material3 = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+    var material4 = new THREE.MeshLambertMaterial({ color: 0xafafaf });
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000);
+    var renderer = new THREE.WebGLRenderer();
+    var renderTimer = setInterval(function () {
+        render();
+    }, 1);//to initialize rendering at 60fps
+
+    var neck1Geo = new THREE.BoxGeometry(4, 16, 4, 20, 100, 20);
+    neck1Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck1 = new THREE.Mesh(neck1Geo, material1);
+
+    var neck2Geo = new THREE.BoxGeometry(2, 16, 2, 20, 100, 20);
+    neck2Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck2 = new THREE.Mesh(neck2Geo, material2);
+
+    var neck3Geo = new THREE.BoxGeometry(4, 16, 4, 20, 100, 20);
+    neck3Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck3 = new THREE.Mesh(neck3Geo, material3);
+
+    var neck4Geo = new THREE.BoxGeometry(2, 16, 2, 20, 100, 20);
+    neck4Geo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 8, 0));
+    var neck4 = new THREE.Mesh(neck4Geo, material4);
+
+
+    var myObject = new THREE.Object3D();
+    var myNeck2 = new THREE.Object3D();
+    var myNeck3 = new THREE.Object3D();
+    var myNeck4 = new THREE.Object3D();
+
+
+    var spotLight = new THREE.SpotLight(0xffffff);
+
+    //global variables
+    var currentMousePos; //x & y-cordinate of cursor
+    var draging = false; //whether a drag event is occuring
+    var pointHit = false; //whether there is a existing point at click position
+    var hitIndex; //for keeping track of hit events
+    var deleteIndex;
+    var toDelete = false;//to create delete function
+    var divisionNumber = canvas.width / 30;
+    var originalDivisionNumber = divisionNumber;//to create 10 one second divisions. Chanmge this variable to change the timeline's time value
+    var startingTime = 0;
+    var playIndex = 0; //to get the position at which the timer is playing
+    var isPlaying = false;
+    var zoomHitIndex;
+    var zoomDragging = false
+    var moveDrag = false;
+    var offsetx = 0;
+    var clickx = 0
+    var originalX0;
+    var originalX1;
+
+    function init() {
+        renderer.setClearColor(new THREE.Color(0xEEEEEE, 1.0));
+        renderer.setSize(1500, 500)
+
+        myObject.add(neck1);
+        myObject.position.x = 0;
+        myObject.position.y = 0;
+        myObject.position.z = 0;
+        neck1.add(myNeck2);
+        myNeck2.add(neck2);
+        neck2.add(myNeck3);
+        myNeck3.add(neck3);
+        neck3.add(myNeck4);
+        myNeck4.add(neck4);
+
+        scene.add(myObject)
+
+        // position and point the camera to the center of the scene
+        camera.position.x = -70;
+        camera.position.y = 80;
+        camera.position.z = 60;
+        camera.lookAt(scene.position);
+
+        // add spotlight for the shadows
+
+        spotLight.position.set(0, 0, 200);
+        spotLight.castShadow = false;
+        spotLight.intensity = 15;
+        scene.add(spotLight);
+
+        // add the output of the renderer to the html element
+        document.getElementById("WebGL-output").appendChild(renderer.domElement);
+
+        keyPointArray[0] = new KeyPoint(0, canvas.height, 'blue');//add first point to Array
+        keyPointArray[1] = new KeyPoint(canvas.width, canvas.height, 'blue')//add first point to Array
+
+        keyPointArray2[0] = new KeyPoint(0, canvas2.height, 'red');//add first point to Array
+        keyPointArray2[1] = new KeyPoint(canvas2.width, canvas2.height, 'red');//add first point to Array
+
+        keyPointArray3[0] = new KeyPoint(0, canvas3.height, 'green');//add first point to Array
+        keyPointArray3[1] = new KeyPoint(canvas3.width, canvas3.height, 'green');//add first point to Array
+
+
+        keyPointArray4[0] = new KeyPoint(0, canvas4.height, 'yellow');//add first point to Array
+        keyPointArray4[1] = new KeyPoint(canvas4.width, canvas4.height, 'yellow');//add first point to Array
+
+        zoomArray[0] = new zoomPoint(0, zoomCanvas.height / 2);
+        zoomArray[1] = new zoomPoint(zoomCanvas.width, zoomCanvas.height / 2);
+
+        divisionNumber = (canvas.width) / (zoomArray[1].time - zoomArray[0].time);
+
+        zoomContext.fillStyle = '#f2f2f2';
+        zoomContext.fillRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+
+
+        render();
+    }
+
+    function setUp() { //clear and reset canvas
+        var index = 0;
+        for (index = 0; index < divisionNumber; index++) {
+
+            context.fillStyle = 'black';
+            context.rect(divisionNumber * index, 0, 0.225, canvas.height);
+
+            context2.fillStyle = 'black';
+            context2.rect(divisionNumber * index, 0, 0.225, canvas.height);
+
+
+            context3.fillStyle = 'black';
+            context3.rect(divisionNumber * index, 0, 0.225, canvas.height);
+
+            context4.fillStyle = 'black';
+            context4.rect(divisionNumber * index, 0, 0.225, canvas.height);
+
+        }
+
+        context.fillStyle = "#FF0000";
+        context.rect(playIndex, 0, 2, canvas.height);//to draw a moving timeLine
+        context.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+
+        context2.fillStyle = "#FF0000";
+        context2.rect(playIndex, 0, 2, canvas.height);//to draw a moving timeLine
+        context2.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context2.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context2.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+
+        context3.fillStyle = "#FF0000";
+        context3.rect(playIndex, 0, 2, canvas.height);//to draw a moving timeLine
+        context3.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context3.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context3.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+
+        context4.fillStyle = "#FF0000";
+        context4.rect(playIndex, 0, 2, canvas.height);//to draw a moving timeLine
+        context4.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context4.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context4.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+
+        delete index;
+    }
+
+    function convertToTimeValue(value) {
+        return value / divisionNumber;
+    }
+
+    function convertToYValue(canvas, value) {
+
+        return ((canvas.height - value) / canvas.height)
+    }
+
+    function KeyPoint(xCoords, yCoords, color) { //keyPointObject Skeleton
+        //this.xCoord = xCoords;
+        this.yCoord = yCoords;
+        this.radius = 9.0;
+        this.color = color;
+        this.time = convertToTimeValue(xCoords) + startingTime;
+        function setColor(setColour) {
+            color = setColor;
+            return color;
+        }
+    }
+
+    function zoomPoint(xCoord, yCoord) { //zoomPoint Skeleton
+        this.xCoord = xCoord;
+        this.yCoord = yCoord;
+        this.time = xCoord / originalDivisionNumber;
+        this.radius = 9.0;
+    }
+
+    function getCurrentMousePos(canvas, evt) {//return X&Y of current mousePosition
+        var rect = canvas.getBoundingClientRect();
+
+        return {
+            x: Math.round((evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width),
+            y: Math.round((evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height)
+        };
+    }
+
+    function plotKeyPoint() {//to plot keyPoints onCanvas
+        //local variables
+        var index = 0;
+        //
+        context.clearRect(0, 0, canvas.width, canvas.height); //clear canvas and move to first coordinate's center
+        context.moveTo((keyPointArray[0].time - startingTime) * divisionNumber, keyPointArray[0].yCoord);
+        context2.clearRect(0, 0, canvas.width, canvas.height); //clear canvas and move to first coordinate's center
+        context2.moveTo((keyPointArray2[0].time - startingTime) * divisionNumber, keyPointArray2[0].yCoord);
+        context3.clearRect(0, 0, canvas.width, canvas.height); //clear canvas and move to first coordinate's center
+        context3.moveTo((keyPointArray3[0].time - startingTime) * divisionNumber, keyPointArray3[0].yCoord);
+        context4.clearRect(0, 0, canvas.width, canvas.height); //clear canvas and move to first coordinate's center
+        context4.moveTo((keyPointArray4[0].time - startingTime) * divisionNumber, keyPointArray4[0].yCoord);
+
+        for (index; index < keyPointArray.length; index++) {
+            var position = keyPointArray[index];
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.arc((position.time - startingTime) * divisionNumber, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context.moveTo(position.time - startingTime * divisionNumber, position.yCoord);
+            context.stroke();
+            context.fillStyle = position.color;
+            context.fill();
+            context.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            delete position;
+        }
+
+        for (index = 0; index < keyPointArray2.length; index++) {
+            var position = keyPointArray2[index];
+            context2.clearRect(0, 0, canvas2.width, canvas2.height);
+            context2.arc((position.time - startingTime) * divisionNumber, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context2.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            context2.stroke();
+            context2.fillStyle = position.color;
+            context2.fill();
+            context2.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            delete position;
+        }
+
+        for (index = 0; index < keyPointArray3.length; index++) {
+            var position = keyPointArray3[index];
+            context3.clearRect(0, 0, canvas3.width, canvas3.height);
+            context3.arc((position.time - startingTime) * divisionNumber, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context3.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            context3.stroke();
+            context3.fillStyle = position.color;
+            context3.fill();
+            context3.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            delete position;
+        }
+
+        for (index = 0; index < keyPointArray4.length; index++) {
+            var position = keyPointArray4[index];
+            context4.clearRect(0, 0, canvas4.width, canvas4.height);
+            context4.arc((position.time - startingTime) * divisionNumber, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context4.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            context4.stroke();
+            context4.fillStyle = position.color;
+            context4.fill();
+            context4.moveTo((position.time - startingTime) * divisionNumber, position.yCoord);
+            delete position;
+        }
+
+        for (index = 0; index < 2; index++) {
+            var circle = zoomArray[index];
+            zoomContext.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+
+            zoomContext.fillStyle = 'rgba(255,000,000,0.8)';
+            zoomContext.fillRect(zoomArray[0].xCoord, 0, zoomArray[1].xCoord - zoomArray[0].xCoord, zoomCanvas.height);
+
+            zoomContext.fillStyle = 'blue'
+            zoomContext.arc(circle.xCoord, circle.yCoord, 11, 0, 2 * Math.PI, false);
+            zoomContext.moveTo(circle.xCoord, circle.yCoord);
+            zoomContext.fill();
+            zoomContext.moveTo(circle.xCoord, circle.yCoord);
+        }
+        delete index;
+    }
+
+    function hitPoint(point, mx, my) {
+        var dx;
+        var dy;
+        dx = mx - (point.time - startingTime) * divisionNumber;
+        dy = my - point.yCoord;
+
+        if ((dx * dx + dy * dy) < 150 == true) {
+            delete dx;
+            delete dy;
+            console.log('hitPoit - hit')
+            return true
+        }
+        return false;
+    }
+
+    function hitPoint2(point, mx, my) {
+        var dx;
+        var dy;
+        dx = mx - point.xCoord;
+        dy = my - point.yCoord;
+        // console.log(dx + ' - vs - ' + dy);
+
+        if ((dx * dx + dy * dy) < 150 == true) {
+            delete dx;
+            delete dy;
+            console.log(true);
+            return true
+        }
+        return false;
+    }
+
+    function sortArray() {
+        keyPointArray.sort(function (a, b) { return a.time - b.time });
+        keyPointArray2.sort(function (a, b) { return a.time - b.time });
+        keyPointArray3.sort(function (a, b) { return a.time - b.time });
+        keyPointArray4.sort(function (a, b) { return a.time - b.time });
+    }
+
+    function drawLabels() {
+        var index = 0;
+        for (index = 0; index < divisionNumber; index++) {
+            context4.font = '10pt Calibri';
+            context4.fillStyle = 'black';
+            context4.rect(divisionNumber * index, 0, 0.225, canvas.height);
+            context4.fillText((index + startingTime) + 's', divisionNumber * index, canvas.height - 30);
+        }
+    }
+
+    function render() {
+        if (playIndex > keyPointArray[keyPointArray.length - 1].time * divisionNumber) {
+            stop();
+        }
+        else {
+            divisionNumber = (canvas.width) / (zoomArray[1].time - zoomArray[0].time);
+            startingTime = zoomArray[0].time;
+            myObject.rotation.y = convertToYValue(canvas, getYValue(keyPointArray, playIndex + startingTime * divisionNumber)) * Math.PI;
+            neck1.rotation.z = convertToYValue(canvas2, getYValue(keyPointArray2, playIndex + startingTime * divisionNumber)) * (Math.PI / 3);
+            neck2.rotation.z = convertToYValue(canvas3, getYValue(keyPointArray3, playIndex + startingTime * divisionNumber)) * (Math.PI / 3);
+            neck3.rotation.z = convertToYValue(canvas4, getYValue(keyPointArray4, playIndex + startingTime * divisionNumber)) * (Math.PI / 3);
+            getPosition();
+
+
+            canvas.width = canvas.width;
+            canvas2.width = canvas2.width;
+            canvas3.width = canvas3.width;
+            canvas4.width = canvas4.width;
+            canvas5.width = canvas5.width;
+            zoomCanvas.width = zoomCanvas.width;
+
+            context5.fillStyle = "#212121";
+            context5.fillRect(0, 0, canvas5.width, canvas5.height);
+            context5.fillStyle = "#FF0000";
+            context5.fillRect(playIndex - 7.5, canvas5.height / 4, 15, canvas5.height / 2);
+
+            setUp();
+            plotKeyPoint();
+            drawLabels();
+            renderer.render(scene, camera);
+        }
+    }
+
+    function play() {
+        return setInterval(function () {
+            playIndex++;
+        }, 19);
+    }
+
+    function start() {
+        isPlaying = true;
+        startingTime = 0;
+        zoomCanvas.width = zoomCanvas.width;
+        zoomArray[0].xCoord = 0;
+        zoomArray[1].xCoord = zoomCanvas.width;
+        zoomArray[0].time = 0;
+        zoomArray[1].time = zoomCanvas.width / originalDivisionNumber
+
+        divisionNumber = canvas.width / 30;
+        render();
+        playIndex = 0;
+        id = play();
+    }
+
+    function stop() {
+        window.clearInterval(id);
+        playIndex = 0;
+        isPlaying = false;
+        canvas.width = canvas.width;
+        render();
+        delete id;
+    }
+
+    function getPosition() {
+
+        myNeck2.position.x = ((Math.sin(myObject.rotation.z)) * 16) * (-Math.cos(myObject.rotation.y).toPrecision(20));
+        myNeck2.position.y = (Math.cos(myObject.rotation.z) * 16);
+        myNeck2.position.z = (-(Math.tan(myObject.rotation.y).toPrecision(20)) * neck1.position.x);
+
+        myNeck3.position.x = ((Math.sin(myObject.rotation.z)) * 16) * (-Math.cos(myObject.rotation.y).toPrecision(20));
+        myNeck3.position.y = (Math.cos(myObject.rotation.z) * 16);
+        myNeck3.position.z = (-(Math.tan(myObject.rotation.y).toPrecision(20)) * neck2.position.x);
+
+        myNeck4.position.x = ((Math.sin(myObject.rotation.z)) * 16) * (-Math.cos(myObject.rotation.y).toPrecision(20));
+        myNeck4.position.y = (Math.cos(myObject.rotation.z) * 16);
+        myNeck4.position.z = (-(Math.tan(myObject.rotation.y).toPrecision(20)) * neck3.position.x);
+    }
+
+    function getYValue(array, timeValue) {//return the y-Value of the line at a given x-value (time)
+        var pointIndex;
+        var currentGradient = 0;
+        var y = 0;
+        for (positionIndex = 0; positionIndex < array.length; positionIndex++) {
+            if (timeValue < array[positionIndex].time * divisionNumber) {
+                pointIndex = positionIndex;
+                break;
+            }
+        }
+        try {
+            currentGradient = (array[pointIndex].yCoord - array[pointIndex - 1].yCoord) / ((array[pointIndex].time * divisionNumber) - (array[pointIndex - 1].time * divisionNumber));
+        }
+        catch (err) {
+            currentGradient = 1;
+        }
+
+        try {
+            y = currentGradient * (timeValue - (array[pointIndex - 1].time * divisionNumber)) + array[pointIndex - 1].yCoord;
+
+        }
+        catch (err) {
+            Y = canvas.height;
+        }
+
+        return y;
+    }
+
+    canvas.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        toDelete = false
+        currentMousePos = getCurrentMousePos(canvas, evt);
+
+        for (searchIndex; searchIndex < keyPointArray.length; searchIndex++) {
+            if (hitPoint(keyPointArray[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true;
+                if (deleteIndex === hitIndex) {
+                    keyPointArray.splice(deleteIndex, 1);
+                    hitIndex = null;
+                    deleteIndex = null;
+                }
+                else {
+                    deleteIndex = hitIndex;
+                    window.setTimeout(function () {
+                        deleteIndex = null;
+                    }, 400);
+                }
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray[keyPointArray.length] = keyPoint;
+        }
+        canvas.width = canvas.width;
+        sortArray();
+        render();
+    }
+
+    canvas.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas, evt);
+        if (draging == true) {
+            if (keyPointArray[hitIndex].time * divisionNumber != 0) {
+                keyPointArray[hitIndex].time = convertToTimeValue(currentMousePos.x) + startingTime;
+            }
+
+            console.log(keyPointArray[1].time);
+            keyPointArray[hitIndex].yCoord = currentMousePos.y;
+            canvas.width = canvas.width;
+            deleteIndex = null;
+            render();
+        }
+    }
+
+    canvas.onmouseup = function (evt) {
+        draging = false;
+        hitIndex = null;
+        canvas.width = canvas.width;
+        sortArray();
+        render();
+    }
+
+    canvas2.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        toDelete = false;
+        currentMousePos = getCurrentMousePos(canvas2, evt);
+
+        for (searchIndex; searchIndex < keyPointArray2.length; searchIndex++) {
+            if (hitPoint(keyPointArray2[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true; if (deleteIndex === hitIndex) {
+                    keyPointArray2.splice(deleteIndex, 1);
+                    hitIndex = null;
+                    deleteIndex = null;
+                }
+                else {
+                    deleteIndex = hitIndex;
+                    window.setTimeout(function () {
+                        deleteIndex = null;
+                    }, 400);
+                }
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray2[keyPointArray2.length] = keyPoint;
+        }
+        canvas2.width = canvas2.width;
+        sortArray();
+        render();
+    }
+
+    canvas2.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas2, evt);
+        if (draging == true) {
+            if (keyPointArray2[hitIndex].time * divisionNumber != 0) {
+                keyPointArray2[hitIndex].time = convertToTimeValue(currentMousePos.x) + startingTime;
+            }
+            keyPointArray2[hitIndex].yCoord = currentMousePos.y;
+            canvas2.width = canvas2.width;
+            deleteIndex = null;
+            render();
+        }
+    }
+
+    canvas2.onmouseup = function (evt) {
+        draging = false;
+        hitIndex = null;
+        canvas2.width = canvas2.width;
+        sortArray();
+        render();
+    }
+
+    canvas3.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        toDelete = false;
+        currentMousePos = getCurrentMousePos(canvas3, evt);
+
+        for (searchIndex; searchIndex < keyPointArray3.length; searchIndex++) {
+            if (hitPoint(keyPointArray3[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true; if (deleteIndex === hitIndex) {
+                    keyPointArray3.splice(deleteIndex, 1);
+                    hitIndex = null;
+                    deleteIndex = null;
+                }
+                else {
+                    deleteIndex = hitIndex;
+                    window.setTimeout(function () {
+                        deleteIndex = null;
+                    }, 400);
+                }
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray3[keyPointArray3.length] = keyPoint;
+        }
+        canvas3.width = canvas3.width;
+        sortArray();
+        render();
+    }
+
+    canvas3.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas3, evt);
+        if (draging == true) {
+            if (keyPointArray3[hitIndex].time * divisionNumber != 0) {
+                keyPointArray3[hitIndex].time = convertToTimeValue(currentMousePos.x) + startingTime;
+            }
+            keyPointArray3[hitIndex].yCoord = currentMousePos.y;
+            canvas3.width = canvas3.width;
+            deleteIndex = null;
+            render();
+        }
+    }
+
+    canvas3.onmouseup = function (evt) {
+        draging = false;
+        hitIndex = null;
+        canvas3.width = canvas3.width;
+        sortArray();
+        render();
+    }
+
+    canvas4.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        toDelete = false;
+        currentMousePos = getCurrentMousePos(canvas4, evt);
+
+        for (searchIndex; searchIndex < keyPointArray4.length; searchIndex++) {
+            if (hitPoint(keyPointArray4[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true; if (deleteIndex === hitIndex) {
+                    keyPointArray4.splice(deleteIndex, 1);
+                    hitIndex = null;
+                    deleteIndex = null;
+                }
+                else {
+                    deleteIndex = hitIndex;
+                    window.setTimeout(function () {
+                        deleteIndex = null;
+                    }, 400); //for adding clock to reset
+                }
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray4[keyPointArray4.length] = keyPoint;
+        }
+        canvas4.width = canvas4.width;
+        sortArray();
+        render();
+    }
+
+    canvas4.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas4, evt);
+        if (keyPointArray4[hitIndex].time * divisionNumber != 0) {
+            keyPointArray4[hitIndex].time = convertToTimeValue(currentMousePos.x) + startingTime;
+        }
+        keyPointArray4[hitIndex].yCoord = currentMousePos.y;
+        canvas4.width = canvas4.width;
+        deleteIndex = null;
+        render();
+    }
+
+    canvas4.onmouseup = function (evt) {
+        draging = false;
+        hitIndex = null;
+        canvas4.width = canvas4.width;
+        sortArray();
+        render();
+    }
+
+    canvas5.onmousedown = function (evt) {
+        var mousePos = getCurrentMousePos(canvas5, evt);
+        draging = true;
+        playIndex = mousePos.x;
+        render()
+    }
+
+    canvas5.onmousemove = function (evt) {
+        if (draging) {
+            var mousePos = getCurrentMousePos(canvas5, evt);
+            draging = true;
+            playIndex = mousePos.x;
+            render();
+        }
+    }
+
+    canvas5.onmouseup = function (evt) {
+        var mousePos = getCurrentMousePos(canvas5, evt);
+        playIndex = mousePos.x;
+        draging = false;
+        render()
+
+    }
+
+    zoomCanvas.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        currentMousePos = getCurrentMousePos(zoomCanvas, evt);
+
+        for (searchIndex; searchIndex < 2; searchIndex++) {
+            if (hitPoint2(zoomArray[searchIndex], currentMousePos.x, currentMousePos.y) === true) {
+                zoomHitIndex = searchIndex;
+                pointHit = true;
+                zoomDragging = true;
+                delete searchIndex;
+                console.log(true);
+                break;
+            }
+            else if (currentMousePos.x >= zoomArray[0].xCoord + 13 && currentMousePos.x <= zoomArray[1].xCoord - 13) {
+                moveDrag = true;
+                clickx = currentMousePos.x;
+                originalX0 = zoomArray[0].xCoord;
+                originalX1 = zoomArray[1].xCoord;
+            }
+        }
+        delete searchIndex;
+    }
+
+    zoomCanvas.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas2, evt);
+        if (zoomDragging == true) {
+            zoomArray[zoomHitIndex].xCoord = currentMousePos.x
+            zoomArray[zoomHitIndex].time = currentMousePos.x / originalDivisionNumber;
+            zoomCanvas.width = zoomCanvas.width;
+        }
+
+        else if (moveDrag) {
+            offsetx = clickx - currentMousePos.x;
+            if (originalX0 - offsetx >= 0) {
+                if (originalX1 - offsetx <= zoomCanvas.width) {
+                    zoomArray[0].xCoord = originalX0 - offsetx;
+                    zoomArray[1].xCoord = originalX1 - offsetx;
+                    zoomArray[0].time = zoomArray[0].xCoord / originalDivisionNumber;
+                    zoomArray[1].time = zoomArray[1].xCoord / originalDivisionNumber;
+                }
+            }
+        }
+    }
+
+    zoomCanvas.onmouseup = function (evt) {
+        zoomDragging = false;
+        moveDrag = false;
+        zoomHitIndex = null;
+    }
+
+    canvas.onmouseout = function () {
+        draging = false
+    }
+
+    canvas2.onmouseout = function () {
+        draging = false
+    }
+
+    canvas3.onmouseout = function () {
+        draging = false
+    }
+
+    canvas4.onmouseout = function () {
+        draging = false
+    }
+
+    canvas5.onmouseout = function () {
+        draging = false
+    }
+
+    zoomCanvas.onmouseout = function () {
+        zoomDragging = false;
+        zoomCanvas.width = zoomCanvas.width;
+        zoomHitIndex = null;
+    }
+
+
+
+</script>

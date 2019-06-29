@@ -1,0 +1,289 @@
+﻿<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>timeLine + Animmation</title>
+    <script src="three.min.js"></script>
+    <script src="stats.js"></script>
+    <script src="three.js"></script>]
+
+    <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body onload="init()">
+    <button id="playButton" style="width:60px;height:30px;" onclick="start()">►</button>
+    <button id="playButton" style="width:60px;height:30px;" onclick="stop()">■</button>
+    <canvas id="timeLineCanvas" width= "1500" height="250"></canvas>
+    <!-- Div which will hold the Output -->
+    <div id="WebGL-output">
+    </div> 
+</body>
+</html>
+
+<script type="text/javascript">
+    /*
+    */
+
+    //global objects
+    var canvas = document.getElementById("timeLineCanvas");
+    var context = canvas.getContext('2d');
+    var keyPointArray = [];
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    var renderer = new THREE.WebGLRenderer()
+    var cubeGeometry = new THREE.BoxGeometry(4, 4, 4);
+    var cubeMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+    var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    var spotLight = new THREE.SpotLight(0xffffff);
+
+    
+    //global variables
+    var currentMousePos; //x & y-cordinate of cursor
+    var draging = false; //whether a drag event is occuring
+    var pointHit = false; //whether there is a existing point at click position
+    var hitIndex; //for keeping track of hit events
+    var divisionNumber = canvas.width / 8;//to create 8 one second divisions. Chanmge this variable to change the timeline's time value
+
+    var maxPositionValue = 25;//max value of graph
+    var minPositionValue = -25;//minimum value of graph
+    var playIndex = 0; //to get the position at which the timer is playing
+
+    context.fillStyle = '#9eabb8';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    function init() {
+        renderer.setClearColor(new THREE.Color(0xEEEEEE, 1.0));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        
+        cube.position.x = 0;
+        cube.position.y = 0;
+        cube.position.z = 0;
+
+        // add the cube to the scene
+        scene.add(cube);
+
+        // position and point the camera to the center of the scene
+        camera.position.x = -30;
+        camera.position.y = 40;
+        camera.position.z = 30;
+        camera.lookAt(scene.position);
+
+        // add spotlight for the shadows
+
+        spotLight.position.set(-40, 60, -10);
+        spotLight.castShadow = true;
+        scene.add(spotLight);
+
+        // add the output of the renderer to the html element
+        document.getElementById("WebGL-output").appendChild(renderer.domElement);
+        render();
+    }
+
+    function setUp() { //clear and reset canvas
+        var index = 0;
+        for (index = 0; index < divisionNumber; index++) {
+            context.font = '10pt Calibri';
+            context.fillStyle = 'black';
+            context.rect(divisionNumber * index, 0, 0.225, canvas.height);
+            context.fillText(index + 'sec', divisionNumber * index, canvas.height - 30);
+        }
+        context.fillStyle = "#FF0000";
+        context.rect(playIndex,0, 2, canvas.height);
+        context.rect(0, canvas.height, canvas.width, 0.25);//to draw minimum axis
+        context.rect(0, 0, canvas.width, 0.25);//to draw max axis
+        context.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+        delete index;
+    }
+
+    function convertToXValue(value) {
+        return value / divisionNumber;
+    }
+
+    function convertToYValue(value) {
+        if (value > canvas.height / 2) {
+            return (value - canvas.height / 2) / (canvas.height / 2) * minPositionValue;
+        }
+        else if (value == canvas.height / 2) {
+            return 0;
+        }
+        else {
+            return (canvas.height / 2 - value) / (canvas.height / 2) * maxPositionValue;
+        }
+    }
+
+
+    function KeyPoint(xCoord, yCoord, color) { //keyPointObject Skeleton
+        this.xCoord = xCoord;
+        this.yCoord = yCoord;
+        this.radius = 9.0;
+        this.color = color;
+        this.angle = convertToYValue(yCoord);
+        function setColor(setColour) {
+            color = setColor;
+            return color;
+        }
+    }
+
+    keyPointArray[0] = new KeyPoint(0, canvas.height / 2, 'red');//add first point to Array
+
+    function getCurrentMousePos(canvas, evt) {//return X&Y of current mousePosition
+        var rect = canvas.getBoundingClientRect();
+
+        return {
+            x: Math.round((evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width),
+            y: Math.round((evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height)
+        };
+    }
+
+    function plotKeyPoint() {//to plot keyPoints onCanvas
+        //local variables
+        var index = 0;
+        //
+        context.clearRect(0, 0, canvas.width, canvas.height); //clear canvas and move to first coordinate's center
+        context.moveTo(keyPointArray[0].xCoord, keyPointArray[0].yCoord);
+
+        for (index; index < keyPointArray.length; index++) {
+            var position = keyPointArray[index];
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.arc(position.xCoord, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context.moveTo(position.xCoord, position.yCoord);
+            context.stroke();
+            context.fillStyle = position.color;
+            context.fill();
+            context.moveTo(position.xCoord, position.yCoord);
+            delete position;
+        }
+        delete index;
+    }
+
+    function hitPoint(point, mx, my) {
+        var dx;
+        var dy;
+        dx = mx - point.xCoord;
+        dy = my - point.yCoord;
+
+        if ((dx * dx + dy * dy) < 150 == true) {
+            delete dx;
+            delete dy;
+            return true
+        }
+        return false;
+    }
+
+    function sortArray() {
+        keyPointArray.sort(function (a, b) { return a.xCoord - b.xCoord });
+    }
+
+    canvas.onmousedown = function (evt) {
+        var searchIndex = 0
+        pointHit = false;
+        draging = false;
+        currentMousePos = getCurrentMousePos(canvas, evt);
+
+        for (searchIndex; searchIndex < keyPointArray.length; searchIndex++) {
+            if (hitPoint(keyPointArray[searchIndex], currentMousePos.x, currentMousePos.y)) {
+                hitIndex = searchIndex;
+                pointHit = true;
+                draging = true;
+                delete searchIndex;
+                break;
+            }
+        }
+        delete searchIndex;
+
+        if (pointHit == false) {
+            var keyPoint = new KeyPoint(currentMousePos.x, currentMousePos.y, 'blue');
+            keyPointArray[keyPointArray.length] = keyPoint;
+        }
+        canvas.width = canvas.width;
+        sortArray();
+        render();
+    }
+
+    canvas.onmousemove = function (evt) {
+        currentMousePos = getCurrentMousePos(canvas, evt);
+        if (draging == true) {
+            if (keyPointArray[hitIndex].xCoord != 0) {
+                keyPointArray[hitIndex].xCoord = currentMousePos.x;
+            }
+            keyPointArray[hitIndex].yCoord = currentMousePos.y;
+            canvas.width = canvas.width;
+            render();
+        }
+    }
+
+    function drawLabels() {
+        var index = 0;
+        for (index = 0; index < divisionNumber; index++) {
+            context.font = '10pt Calibri';
+            context.fillStyle = 'black';
+            context.rect(divisionNumber * index, 0, 0.225, canvas.height);
+            context.fillText(index + 'sec', divisionNumber * index, canvas.height - 30);
+        }
+    }
+    canvas.onmouseup = function (evt) {
+        draging = false;
+        canvas.width = canvas.width;
+        sortArray();
+        render();
+    }
+
+    function render() {
+        if (playIndex > keyPointArray[keyPointArray.length - 1].xCoord) {
+            stop();
+        }
+        else {
+            cube.position.x = convertToYValue(getYValue(playIndex));
+            canvas.width = canvas.width;
+            renderer.render(scene, camera);
+            setUp();
+            plotKeyPoint();
+            drawLabels();
+        }
+    }
+
+    function play() {
+        return setInterval(function () {
+            playIndex++;
+            render();
+        }, 5.33);
+    }
+    
+    function start() {
+       id = play();
+    }
+
+    function stop() {
+        window.clearInterval(id);
+        playIndex = 0;
+        canvas.width = canvas.width;
+        render();
+        delete id;
+    }
+
+    function getYValue(timeValue) {//return the y-Value of the line at a given x-value (time)
+        var pointIndex;
+        var currentGradient = 0;
+        var y = 0;
+
+        for (positionIndex = 0; positionIndex < keyPointArray.length; positionIndex++) {
+            if (timeValue < keyPointArray[positionIndex].xCoord) {
+                pointIndex = positionIndex;
+                break;
+            }
+        }
+        currentGradient = (keyPointArray[pointIndex].yCoord - keyPointArray[pointIndex - 1].yCoord) /(keyPointArray[pointIndex].xCoord - keyPointArray[pointIndex - 1].xCoord);
+
+        y = currentGradient * (timeValue - keyPointArray[pointIndex - 1].xCoord) + keyPointArray[pointIndex - 1].yCoord;
+        return y;
+
+    }
+
+</script>

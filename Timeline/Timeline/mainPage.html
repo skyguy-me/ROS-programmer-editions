@@ -1,0 +1,138 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            margin: 10px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="myCanvas" width="1500" height="250"></canvas>
+
+</body>
+</html>
+<script>
+    //global objects
+    var canvas = document.getElementById('myCanvas');
+    var context = canvas.getContext('2d');
+    var keyPointArray = [];
+
+    //global variables
+    var currentMousePos; //x & y-cordinate of cursor
+    var draging = false; //whether a drag event is occuring
+    var pointHit = false; //whether there is a existing point at click position
+    var hitIndex; //for keeping track of hit events
+ 
+    function setUp() {
+        context.rect(0, canvas.height, canvas.width, 0.5);//to draw minimum axis
+        context.rect(0, 0, canvas.width, 0.5);//to draw max axis
+        context.rect(0, canvas.height / 2.0, canvas.width, 0.5);//to draw the neutral axis
+    }
+
+
+    function getMousePos(canvas, evt) {
+        var rect = canvas.getBoundingClientRect();
+
+        return {
+            x: Math.round((evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width),
+            y: Math.round((evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height)
+        };
+    }
+
+    function KeyPoint(xCoord, yCoord, color) {
+        this.xCoord = xCoord;
+        this.yCoord = yCoord;
+        this.radius = 10;
+        this.color = color;
+    }
+
+    //add first point to Array
+    keyPointArray[0] = new KeyPoint(0, canvas.height / 2, 'green');
+    keyPointArray[1] = new KeyPoint(401, 0, 'green');
+    keyPointArray[2] = new KeyPoint(1025, 125, 'green');
+    keyPointArray[3] = new KeyPoint(170, 400 / 2, 'green');
+    keyPointArray[4] = new KeyPoint(140, 32, 'green');
+    keyPointArray[4] = new KeyPoint(115, 05, 'green');
+    keyPointArray[5] = new KeyPoint(150, 15, 'green');
+    keyPointArray[keyPointArray.length] = new KeyPoint(108, 95, 'green');
+    keyPointArray[keyPointArray.length] = new KeyPoint(1035, 105, 'green');
+    keyPointArray[keyPointArray.length] = new KeyPoint(1050, 85, 'green');
+    keyPointArray[keyPointArray.length] = new KeyPoint(1040, 25, 'green');
+    keyPointArray[keyPointArray.length] = new KeyPoint(1014, 225, 'green');
+    console.log(keyPointArray);
+   
+    function plotKeyPoint() {
+        var index = 0;
+        
+        canvas.width = canvas.width;
+        setUp();
+        context.moveTo(keyPointArray[0].xCoord,keyPointArray[0].yCoord);
+        for (index; index < keyPointArray.length; index++) {
+            var position = keyPointArray[index];
+            context.fillStyle = position.color;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.arc(position.xCoord, position.yCoord, position.radius, 0, 2 * Math.PI, false);
+            context.moveTo(position.xCoord, position.yCoord);
+            context.stroke();
+            context.fill();
+            context.moveTo(position.xCoord, position.yCoord);
+        }
+    }
+
+    function sortArray() {
+        keyPointArray.sort(function (a, b) { return a.xCoord - b.xCoord });
+    }
+
+    canvas.onclick = function (evt) {
+        var mousePos = getMousePos(canvas, evt);
+        var keyPoint = new KeyPoint(mousePos.x, mousePos.y, 'green');
+
+        keyPointArray[keyPointArray.length] = keyPoint;//to store object in array
+        sortArray();
+        plotKeyPoint();  //plot the graph
+    }
+
+    canvas.onmousedown = function (evt) {
+        var mousePos = getMousePos(canvas, evt);
+        var searchIndex = 0
+
+        draging = false;
+        for (searchIndex = 0; searchIndex < keyPointArray.length; searchIndex++) {
+            var point = keyPointArray[searchIndex];
+            var dx = mousePos.x - point.xCoord;
+            var dy = mousePos.y - point.yCoord;
+
+            if (dx * dx + dy * dy < 100) {
+                console.log('hit');
+                hitIndex = searchIndex;
+                draging = true;
+                console.log('dragging');
+                console.log('keyp');
+                break;
+            }
+        }
+    }
+
+    canvas.onmouseup = function(evt) {
+        draging = false;
+        sortArray();
+        plotKeyPoint();
+        console.log('not dragging');
+        console.log(keyPointArray);
+    }
+
+    canvas.onmousemove = function (evt) {
+        var mousePos = getMousePos(canvas, evt);
+        if (draging == true) {
+            keyPointArray[hitIndex].xCoord = mousePos.x;
+            keyPointArray[hitIndex].yCoord = mousePos.y;
+            canvas.width = canvas.width;
+            setUp();
+
+            plotKeyPoint();
+        }
+    }
+
+</script>

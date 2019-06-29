@@ -1,0 +1,6 @@
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\3dmodelling\3dmodelling\bin\3dmodelling.dll.config
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\3dmodelling\3dmodelling\bin\3dmodelling.dll
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\3dmodelling\3dmodelling\bin\3dmodelling.pdb
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\3dmodelling\3dmodelling\obj\Debug\3dmodelling.csprojResolveAssemblyReference.cache
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\3dmodelling\3dmodelling\obj\Debug\3dmodelling.dll
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\3dmodelling\3dmodelling\obj\Debug\3dmodelling.pdb

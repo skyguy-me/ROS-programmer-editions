@@ -1,0 +1,5 @@
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\ThreeJSapplication4.9sln\ThreeJSapplication4.9\bin\ThreeJSapplication4.9.dll.config
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\ThreeJSapplication4.9sln\ThreeJSapplication4.9\bin\ThreeJSapplication4.9.dll
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\ThreeJSapplication4.9sln\ThreeJSapplication4.9\bin\ThreeJSapplication4.9.pdb
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\ThreeJSapplication4.9sln\ThreeJSapplication4.9\obj\Debug\ThreeJSapplication4.9.dll
+C:\Users\stujk\Documents\Visual Studio 2013\Projects\Test Releases\ThreeJSapplication4.9sln\ThreeJSapplication4.9\obj\Debug\ThreeJSapplication4.9.pdb

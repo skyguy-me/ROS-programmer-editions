@@ -1,0 +1,38 @@
+
+
+{
+	"length": 12,
+	"actuators": {
+		"neck": {
+			"name" : "neck",
+			"keyPoints": [
+				{
+					"a": 30,
+					"b": 50
+				},
+				{
+					"a": 28,
+					"b": 78
+				}
+			]
+		},
+		"shoulder": {
+			"name" : "shoulder",
+			"keyPoints": [
+				{
+					"a": 30,
+					"b": 50
+				},
+				{
+					"a": 28,
+					"b": 78
+				}
+			]
+		}
+	}
+}
+
+anim.actuators.shoulder.doStuff(2,3);
+
+
+

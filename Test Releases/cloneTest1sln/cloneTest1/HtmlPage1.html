@@ -1,0 +1,53 @@
+﻿<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>timeLine+Animmation</title>
+    <!--<script src="Scripts/three.js"></script>
+    <script src="Scripts/flotr2.min.js"></script>-->
+    <script src="Scripts/envision.js"></script>
+    <script src="Scripts/data.js"></script>
+    <script src="Scripts/includes.js"></script>
+    <style >
+        #editor-render-0 {
+            width: 600px;
+            height: 600px;
+            margin: 8px auto;
+        }
+    </style>
+
+</head>
+<body>
+
+    <div id="editor-render-0">
+    </div>
+
+</body>
+</html>
+
+<script type="text/javascript">
+    (function timeseries_demo(container) {
+
+        var options = {
+            container: container,
+            data: {
+                detail: financeData.price,
+                summary: financeData.price
+            },
+            // An initial selection
+            selection: {
+                data: {
+                    x: {
+                        min: 100,
+                        max: 200
+                    }
+                }
+            }
+        };
+
+        return new envision.templates.TimeSeries(options);
+    }
+  )(document.getElementById("editor-render-0"));
+
+</script>
